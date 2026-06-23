@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Graph Visualizer</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="sidebar">
+    <h2>
+        Graph Tool
+    </h2>
+
+    <button id="btnAdd">Add Vertex</button>
+    <button id="btnEdge">Add Edge</button>
+    <button id="btnDelete">Delete</button>
+    <button id="btnClear">Clear All</button>
+    <button id="btnredo">Redo</button>
+    <button id="btnundo">Undo</button>
+  
+
+    <p id="hint">Click a button to get started</p>
+  </div>
+
+  <div id = "toprightbar">
+    <button id="btnSave">Save Graph</button>
+    <button id="btnLoad">Load Graph</button>
+  </div>
+
+  <div id = "toolbar">
+    <button id="btnNew">New Graph</button>
+    <div id="tabs"></div>
+  </div>
+
+    <canvas 
+    id="canvas">
+</canvas>
+  <script 
+  src="js/main.js">
+</script>
+</body>
+</html>
