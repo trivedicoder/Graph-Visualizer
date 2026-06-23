@@ -119,6 +119,20 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke()
   }
 
+  // Grid coordinate labels every 100px
+  ctx.fillStyle = '#555'
+  ctx.font = '10px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'top'
+  for (var lx = 100; lx < canvas.width; lx += 100) {
+    ctx.fillText(lx, lx, 2)
+  }
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  for (var ly = 100; ly < canvas.height; ly += 100) {
+    ctx.fillText(ly, 2, ly)
+  }
+
   edges.forEach(function(e) {
     var from = getVertex(e.from)
     var to   = getVertex(e.to)
@@ -238,6 +252,11 @@ canvas.addEventListener('click', function(event) {
 
   var cv = getClickedVertex(x, y)
   var ce = getClickedEdge(x, y)
+
+  if (cv) {
+    document.getElementById('hint').textContent =
+      'Vertex ' + cv.id + '  (' + Math.round(cv.x) + ', ' + Math.round(cv.y) + ')'
+  }
 
   if (mode === 'add') {
     if (cv) return
