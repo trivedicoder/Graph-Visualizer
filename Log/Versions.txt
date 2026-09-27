@@ -7,8 +7,9 @@ Allow user to connect those vertices with edges
 Allow user to delete edges and vertices that are clicked on
 Allow user to clear the whole template
 
-V2:
+V2 (June 26, 2026):
 
-Adding redo Buttons
+Adding redo and undo Buttons
 Adding Save and Load graph Buttons
 Adding graph tab, allows user to load multiple graphs
+Allowing user to choose between upload data to an exisiting or new graph template
