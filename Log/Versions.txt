@@ -1,0 +1,15 @@
+V1 (June 6th 2026):
+
+Create a workspace grid that allows vertices and edges to be placed.
+Buttons for user to switch between placing edges, vertices, deleting or clearing the template
+Allow user to put n number of vertices
+Allow user to connect those vertices with edges
+Allow user to delete edges and vertices that are clicked on
+Allow user to clear the whole template
+
+V2 (June 26, 2026):
+
+Adding redo and undo Buttons
+Adding Save and Load graph Buttons
+Adding graph tab, allows user to load multiple graphs
+Allowing user to choose between upload data to an exisiting or new graph template
