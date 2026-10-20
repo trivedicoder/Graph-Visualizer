@@ -21,5 +21,5 @@ function createContactRepresentation(graph, outerEdge) {
   // 6. Return layout data for later drawing in the graph visualizer.
   return { rectangles, contacts, order };
 }
-
-module.exports = { createContactRepresentation };
+    
+module.exports = {createContactRepresentation};
