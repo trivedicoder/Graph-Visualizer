@@ -1,0 +1,110 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      display: flex;
+      height: 100vh;
+      font-family: sans-serif;
+      background: black;
+      color: white;
+    }
+
+    #sidebar {
+      width: 160px;
+      background: #111111;
+      padding: 20px 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-right: 1px solid #333;
+    }
+
+    #toprightbar {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    #toolbar {
+      position: fixed;
+      bottom: 0;
+      left: 160px;
+      right: 0;
+      height: 48px;
+      background: #111;
+      border-top: 1px solid #333;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    #tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .tab {
+      padding: 8px 12px;
+      background: #222244;
+      color: white;
+      cursor: pointer;
+      font-size: 13px;
+      border-radius: 5px;
+    }
+
+    .tab.active {
+      background: #aaddff;
+      color: black;
+      font-weight: bold;
+    }
+
+    h2 { color: #aaddff; font-size: 16px; }
+
+    button {
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      background: #222244;
+      color: white;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    #btnNew {
+      background: #224422;
+      white-space: nowrap;
+    }
+
+    #btnundo {
+      background: #22aa22;
+    }
+
+    #btnredo {
+      background: #aa2222;
+    }
+
+
+    button.active {
+      background: #aaddff;
+      color: black;
+      font-weight: bold;
+    }
+
+    #hint {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    canvas {
+      flex: 1;
+      background: black;
+      cursor: crosshair;
+      display: block;
+  
+    }
+
+    
