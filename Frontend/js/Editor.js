@@ -15,7 +15,8 @@ class Editor {
     this.mode        = 'add'    // 'add', 'edge', or 'delete'
     this.firstPickId = null     // first vertex picked in edge mode
     this.hoveredId   = null     // vertex under the mouse
-    this.contactSquares = null
+    this.contact     = null     // { rectangles, width, height } while showing a contact representation
+    this.contactPoles = null    // { north, east, south, west } of the shown representation
 
     // Arrow functions (=>) keep "this" pointing at the Editor inside the handler
     canvas.addEventListener('click',      (e) => this.handleClick(e))
@@ -27,19 +28,20 @@ class Editor {
     this.graph       = graph
     this.firstPickId = null
     this.hoveredId   = null
-    this.contactSquares = null
+    this.contact     = null
     this.draw()
   }
 
   setMode(mode) {
     this.mode        = mode
     this.firstPickId = null
-    this.contactSquares = null
+    this.contact     = null
     this.draw()
   }
 
-  showContactSquares(squares) {
-    this.contactSquares = squares
+  // Show a rectangular dual (grid units) instead of the graph; any mode button goes back.
+  showContactRepresentation(rectangles, size) {
+    this.contact = rectangles ? { rectangles: rectangles, width: size.width, height: size.height } : null
     this.draw()
   }
 
@@ -54,8 +56,8 @@ class Editor {
 
   //______________________________ Drawing ______________________________
   draw() {                                          // redraw everything from scratch
-    if (this.contactSquares) {
-      this.drawSquareRepresentation()
+    if (this.contact) {
+      this.drawContactRepresentation()
       return
     }
     var hv = this.graph.getVertex(this.hoveredId)   // hovered vertex, if any
@@ -121,22 +123,34 @@ class Editor {
     })
   }
 
-  drawSquareRepresentation() {
-    var ctx = this.ctx
+  drawContactRepresentation() {                    // rectangles scaled to fit the canvas
+    var ctx     = this.ctx
+    var contact = this.contact
+    var margin  = this.ORIGIN
+    var scale   = Math.min((this.canvas.width - 2 * margin) / contact.width,
+                           (this.canvas.height - 2 * margin) / contact.height)
+    var frame   = '#9b7fc4'                                     // outer frame (v_N, v_E, v_S, v_W)
+    var colors  = ['#55aaff', '#55cc99', '#ffaa55', '#bb88ff', '#ff7799']
+    var outer   = this.contactPoles || {}
+    var poleIds = [outer.north, outer.east, outer.south, outer.west].map(String)
+
     ctx.fillStyle = 'black'
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
-    var colors = ['#55aaff', '#55cc99', '#ffaa55', '#bb88ff', '#ff7799']
-    Object.values(this.contactSquares).forEach(function(square, index) {
-      ctx.fillStyle = colors[index % colors.length]
-      ctx.fillRect(square.x, square.y, square.width, square.height)
+    Object.values(contact.rectangles).forEach(function(r, index) {
+      var x = margin + r.x * scale
+      var y = margin + r.y * scale
+      var w = r.width * scale
+      var h = r.height * scale
+      ctx.fillStyle = poleIds.indexOf(String(r.id)) >= 0 ? frame : colors[index % colors.length]
+      ctx.fillRect(x, y, w, h)
       ctx.strokeStyle = '#ffffff'
       ctx.lineWidth = 2
-      ctx.strokeRect(square.x, square.y, square.width, square.height)
+      ctx.strokeRect(x, y, w, h)
       ctx.fillStyle = '#000000'
       ctx.font = 'bold 12px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillText(square.id, square.x + square.width / 2, square.y + square.height / 2)
+      ctx.fillText(r.id, x + w / 2, y + h / 2)
     })
   }
 
@@ -157,7 +171,7 @@ class Editor {
   }
 
   handleClick(event) {
-    if (this.contactSquares) return
+    if (this.contact) return
     var p = this.mousePos(event)
     if (this.mode === 'add')    this.handleAdd(p.x, p.y)
     if (this.mode === 'edge')   this.handleEdge(p.x, p.y)
@@ -198,7 +212,7 @@ class Editor {
   }
 
   handleMouseMove(event) {
-    if (this.contactSquares) return
+    if (this.contact) return
     var p = this.mousePos(event)
     var v = this.graph.vertexAt(p.x, p.y, this.RADIUS)
     this.setHovered(v ? v.id : null)

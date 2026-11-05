@@ -127,8 +127,73 @@ class Graph {
     return { vertices: this.vertices, edges: this.edges }
   }
 
-  // Export graph data; square construction uses canvas coordinates as centers.
-  toXML() {
+  // Infer each vertex's clockwise neighbor order from the current drawing.
+  // This is only an embedding candidate: it does not detect crossings or prove planarity.
+  toRotationSystem() {
+    var verticesById = new Map()
+    var neighborsById = new Map()
+    var occupiedPositions = new Set()
+    this.vertices.forEach(function(v) {
+      if (v.id === null || v.id === undefined || verticesById.has(v.id)) {
+        throw new Error('Cannot export a graph with missing or duplicate vertex IDs')
+      }
+      if (!Number.isFinite(v.x) || !Number.isFinite(v.y)) {
+        throw new Error('Cannot derive neighbor order without finite vertex coordinates')
+      }
+      var position = v.x + ',' + v.y
+      if (occupiedPositions.has(position)) {
+        throw new Error('Cannot derive a planar embedding when vertices share coordinates')
+      }
+      occupiedPositions.add(position)
+      verticesById.set(v.id, v)
+      neighborsById.set(v.id, new Set())
+    })
+
+    this.edges.forEach(function(e) {
+      if (!verticesById.has(e.from) || !verticesById.has(e.to)) {
+        throw new Error('Cannot export an edge that references a missing vertex')
+      }
+      if (e.from === e.to) {
+        throw new Error('Cannot export a planar embedding with a self-loop')
+      }
+      if (neighborsById.get(e.from).has(e.to)) {
+        throw new Error('Cannot export a planar embedding with duplicate edges')
+      }
+      neighborsById.get(e.from).add(e.to)
+      neighborsById.get(e.to).add(e.from)
+    })
+
+    return this.vertices.map(function(v) {
+      var neighbors = Array.from(neighborsById.get(v.id))
+      neighbors.sort(function(a, b) {
+        var va = verticesById.get(a)
+        var vb = verticesById.get(b)
+        return Math.atan2(va.y - v.y, va.x - v.x) -
+          Math.atan2(vb.y - v.y, vb.x - v.x)
+      })
+      for (var i = 0; neighbors.length > 1 && i < neighbors.length; i++) {
+        var a = verticesById.get(neighbors[i])
+        var b = verticesById.get(neighbors[(i + 1) % neighbors.length])
+        var ax = a.x - v.x
+        var ay = a.y - v.y
+        var bx = b.x - v.x
+        var by = b.y - v.y
+        if (ax * by - ay * bx === 0 && ax * bx + ay * by > 0) {
+          throw new Error('Cannot derive a unique circular neighbor order for collinear edges')
+        }
+      }
+      return { vertex: v, neighbors: neighbors }
+    })
+  }
+
+  // Export version 1 of the planar-graph input format. The rotation system is
+  // only a candidate inferred from canvas coordinates; no planarity test runs here
+  // (REL.js checks planarity with Euler's formula when the XML is processed).
+  // options.poles = { north, east, south, west } vertex ids marks the outer face;
+  // without it the outer face is left "not-selected" and REL.js detects it.
+  toXML(options) {
+    var poles = options && options.poles
+    var rotationSystem = this.toRotationSystem()
     var escapeAttribute = function(value) {
       return String(value)
         .replace(/&/g, '&amp;')
@@ -143,7 +208,8 @@ class Graph {
       '  <vertices coordinateSystem="canvas-pixels">'
     ]
 
-    this.vertices.forEach(function(vertex) {
+    rotationSystem.forEach(function(entry) {
+      var vertex = entry.vertex
       lines.push('    <vertex id="' + escapeAttribute(vertex.id) +
         '" x="' + escapeAttribute(vertex.x) +
         '" y="' + escapeAttribute(vertex.y) + '" />')
@@ -159,6 +225,27 @@ class Graph {
         '" to="' + escapeAttribute(edge.to) + '" />')
     })
     lines.push('  </edges>')
+    lines.push('  <rotationSystem status="candidate" source="canvas-coordinates" direction="clockwise">')
+    rotationSystem.forEach(function(entry) {
+      lines.push('    <rotation vertex="' + escapeAttribute(entry.vertex.id) + '">')
+      entry.neighbors.forEach(function(neighborId) {
+        lines.push('      <neighbor ref="' + escapeAttribute(neighborId) + '" />')
+      })
+      lines.push('    </rotation>')
+    })
+    lines.push('  </rotationSystem>')
+    if (poles) {
+      lines.push('  <outerFace status="selected">')
+      ;['north', 'east', 'south', 'west'].forEach(function(side) {
+        if (!this.getVertex(poles[side])) {
+          throw new Error('Pole ' + side + ' refers to a vertex that does not exist')
+        }
+        lines.push('    <pole side="' + side + '" ref="' + escapeAttribute(poles[side]) + '" />')
+      }, this)
+      lines.push('  </outerFace>')
+    } else {
+      lines.push('  <outerFace status="not-selected" />')
+    }
     lines.push('  <contactRepresentation status="not-generated" />')
     lines.push('</planarGraph>')
     return lines.join('\n')

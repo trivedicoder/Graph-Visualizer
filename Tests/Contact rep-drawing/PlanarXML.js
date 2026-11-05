@@ -15,6 +15,7 @@
   const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
 
   function unescapeXml(text) {
+    // https://www.w3.org/TR/xml/#syntax
     return text.replace(/&(#x[0-9a-fA-F]+|#\d+|[a-zA-Z]+);/g, (match, body) => {
       if (body[0] === '#') {
         const code = body[1] === 'x' ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
@@ -73,12 +74,13 @@
     return /^-?\d+$/.test(value) ? Number(value) : value;
   }
 
+  // Returns the first child with the given name, or null if none.
   function child(element, name) {
     return element.children.find((c) => c.name === name) || null;
   }
 
   /**
-   * @param {string} xmlText contents of planer-rep.xml
+   * @param {string} xmlText contents of planar-graph.xml
    * @returns {{ graph: object|null, problems: string[] }}
    */
   function parsePlanarGraphXML(xmlText) {
@@ -89,6 +91,7 @@
       return { graph: null, problems: [error.message] };
     }
 
+    // Validate the root element and schemaVersion, then read vertices, edges, rotationSystem and outerFace.
     const problems = [];
     if (rootElement.name !== 'planarGraph') {
       return { graph: null, problems: [`Root element must be <planarGraph>, found <${rootElement.name}>.`] };
@@ -99,6 +102,7 @@
 
     const graph = { name: rootElement.attrs.name || '', vertices: [], edges: [] };
 
+    // Read vertices and edges. Missing sections are a problem, but we still try to read what we can.
     const verticesElement = child(rootElement, 'vertices');
     if (!verticesElement) problems.push('Missing <vertices> section.');
     for (const v of verticesElement ? verticesElement.children : []) {
@@ -107,6 +111,7 @@
       graph.vertices.push({ id: parseId(v.attrs.id), x: Number(v.attrs.x), y: Number(v.attrs.y) });
     }
 
+    // Read edges. Missing sections are a problem, but we still try to read what we can.
     const edgesElement = child(rootElement, 'edges');
     if (!edgesElement) problems.push('Missing <edges> section.');
     for (const e of edgesElement ? edgesElement.children : []) {
@@ -120,6 +125,7 @@
       graph.edges.push(edge);
     }
 
+    // Read rotationSystem. Missing section is not a problem; if present, it must be valid.
     const rotationElement = child(rootElement, 'rotationSystem');
     if (rotationElement) {
       const direction = rotationElement.attrs.direction || 'clockwise';
@@ -141,6 +147,7 @@
       };
     }
 
+    // Read outerFace and poles. Missing section is not a problem; if present, it must be valid.
     const outerFace = child(rootElement, 'outerFace');
     if (outerFace && outerFace.attrs.status === 'selected') {
       const poles = {};
@@ -155,8 +162,8 @@
     return { graph, problems };
   }
 
-  // Browser only: save graph.toXML() as a file (default name planer-rep.xml).
-  function downloadPlanarXML(graph, filename = 'planer-rep.xml', options) {
+  // Browser only: save graph.toXML() as a file (default name planar-graph.xml).
+  function downloadPlanarXML(graph, filename = 'planar-graph.xml', options) {
     const blob = new Blob([graph.toXML(options)], { type: 'application/xml' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

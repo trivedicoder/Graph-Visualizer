@@ -43,8 +43,9 @@
   src="js/Graph.js">  </script>
   <script
   src="js/Editor.js"></script>
-  <!-- The square-contact implementation is shared with its Node tests until it moves into Frontend/js. -->
-  <!-- PlanarXML.js (XML reader) must load before Contact rep.js. -->
+  <!-- The contact-representation code is shared with its Node tests until it moves into Frontend/js. -->
+  <!-- REL.js (circular orders -> canonical order -> REL) and PlanarXML.js (XML reader) must load before Contact rep.js. -->
+  <script src="../Tests/Contact%20rep-drawing/REL.js"></script>
   <script src="../Tests/Contact%20rep-drawing/PlanarXML.js"></script>
   <script src="../Tests/Contact%20rep-drawing/Contact%20rep.js"></script>
   <script

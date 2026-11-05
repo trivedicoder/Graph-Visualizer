@@ -98,8 +98,9 @@ class Buttons {
     URL.revokeObjectURL(url)
   }
 
-  // Generate planar-graph.xml in memory and pass the graph parsed from that XML
-  // into the contact module. Saving a download is a separate, optional action.
+  // Generate planar-graph.xml in memory and run the lecture's pipeline on it:
+  // circular orders -> PTP check -> refined canonical order -> REL -> rectangular dual.
+  // Saving a download is a separate, optional action.
   runContactRep() {
     try {
       this.planarGraphXml = this.editor.graph.toXML()
@@ -107,25 +108,35 @@ class Buttons {
       this.contactRepresentation = result
 
       if (result.problems.length > 0) {
-        this.editor.showContactSquares(null)
+        this.editor.showContactRepresentation(null)
         this.hint.textContent = 'Could not process the generated planar-graph.xml: ' +
           result.problems.join(' ')
         return
       }
 
+      if (!result.relValid) {
+        this.editor.showContactRepresentation(null)
+        this.hint.textContent = 'No regular edge labeling: ' + result.relProblems.join(' ')
+        return
+      }
+
       if (!result.layoutValid) {
-        this.editor.showContactSquares(null)
-        this.hint.textContent = 'Could not construct an exact square-contact representation: ' +
+        this.editor.showContactRepresentation(null)
+        this.hint.textContent = 'Rectangular dual failed its contact check: ' +
           result.layoutProblems.join(' ')
         return
       }
 
-      this.editor.showContactSquares(result.squares)
-      this.hint.textContent = 'Exact square-contact representation generated: ' +
-        result.contacts.length + ' contacts among ' + Object.keys(result.squares).length + ' squares.'
+      this.editor.contactPoles = result.poles
+      this.editor.showContactRepresentation(result.rectangles, result.layoutSize)
+      var p = result.poles
+      this.hint.textContent = 'Rectangular dual: ' + Object.keys(result.rectangles).length +
+        ' rectangles, ' + result.contacts.length + ' contacts. Poles N=' + p.north + ' E=' + p.east +
+        ' S=' + p.south + ' W=' + p.west + '. Canonical order: ' + result.canonicalOrder.join(' ') +
+        '. Click a mode button to edit again.'
     } catch (err) {
       this.contactRepresentation = null
-      this.editor.showContactSquares(null)
+      this.editor.showContactRepresentation(null)
       this.hint.textContent = 'Could not run Contact Rep: ' + err.message
     }
   }
