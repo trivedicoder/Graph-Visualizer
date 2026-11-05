@@ -1,132 +1,139 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createContactRepresentation } = require('./Contact rep.js');
+const {
+  createContactRepresentation,
+  createContactRepresentationFromXML
+} = require('./Contact rep.js');
+const { parsePlanarGraphXML } = require('./PlanarXML.js');
+const Graph = require('../../Frontend/js/Graph.js');
 
-const poles = { N: 'N', E: 'E', S: 'S', W: 'W' };
-const contactPoles = { north: poles.N, east: poles.E, south: poles.S, west: poles.W };
-const outer = [['N', 'E'], ['E', 'S'], ['S', 'W'], ['W', 'N']].map(([from, to], i) => ({ id: `o${i}`, from, to }));
 const edge = (id, from, to) => ({ id, from, to });
 
-// Contact Rep builds its adjacency list from edges; no st-order is supplied.
-function createRepresentation(graph) {
-  return createContactRepresentation(graph, { poles: contactPoles });
-}
-
-function makeWheelGraph() {
+function makePathGraph() {
   return {
     vertices: [
-      { id: 'N', x: 0, y: 100 },
-      { id: 'E', x: 100, y: 0 },
-      { id: 'S', x: 0, y: -100 },
-      { id: 'W', x: -100, y: 0 },
-      { id: 'C', x: 0, y: 0 }
+      { id: 'a', x: 0, y: 0 },
+      { id: 'b', x: 30, y: 0 },
+      { id: 'c', x: 80, y: 0 }
     ],
-    edges: [
-      ...outer,
-      edge('c1', 'C', 'N'),
-      edge('c2', 'C', 'E'),
-      edge('c3', 'C', 'S'),
-      edge('c4', 'C', 'W')
-    ]
+    edges: [edge('ab', 'a', 'b'), edge('bc', 'b', 'c')]
   };
 }
 
-function makeTwoInnerVertexGraph() {
-  return {
-    vertices: [
-      { id: 'N', x: 0, y: 100 },
-      { id: 'E', x: 100, y: 0 },
-      { id: 'S', x: 0, y: -100 },
-      { id: 'W', x: -100, y: 0 },
-      { id: 'a', x: -40, y: 0 },
-      { id: 'b', x: 40, y: 0 }
-    ],
-    edges: [
-      ...outer,
-      edge('a1', 'a', 'W'),
-      edge('a2', 'a', 'N'),
-      edge('a3', 'a', 'S'),
-      edge('ab', 'a', 'b'),
-      edge('b1', 'b', 'N'),
-      edge('b2', 'b', 'S'),
-      edge('b3', 'b', 'E')
-    ]
-  };
-}
+test('infers unequal square sizes and creates exact side contacts', () => {
+  const result = createContactRepresentation(makePathGraph());
 
-test('wheel graph builds adjacency and traverses without a supplied st-order', () => {
-  const graph = makeWheelGraph();
-  const result = createRepresentation(graph);
-
-  assert.equal(result.valid, true, result.problems.join('; '));
-  assert.deepEqual(result.adjacency.get('C'), ['N', 'E', 'S', 'W']);
-  assert.equal(result.traversalOrder.length, graph.vertices.length);
-  assert.ok(result.traversalOrder.includes('N'));
-  assert.ok(result.traversalOrder.includes('C'));
-  assert.ok(result.rectangles.C);
-  assert.equal(result.layoutValid, false, 'rectangle placement is still a placeholder');
-});
-
-test('two inner vertices are connected through the edge-derived adjacency list', () => {
-  const graph = makeTwoInnerVertexGraph();
-  const result = createRepresentation(graph);
-
-  assert.equal(result.valid, true, result.problems.join('; '));
-  assert.deepEqual(result.adjacency.get('a'), ['W', 'N', 'S', 'b']);
-  assert.equal(result.traversalOrder.length, graph.vertices.length);
-  assert.ok(result.traversalOrder.includes('a'));
-  assert.ok(result.traversalOrder.includes('b'));
-  assert.ok(result.rectangles.a);
-  assert.ok(result.rectangles.b);
-  assert.equal(result.layoutValid, false, 'rectangle placement is still a placeholder');
-});
-
-test('XML rotation system controls neighbor traversal order', () => {
-  const graph = {
-    vertices: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 1, y: 0 }, { id: 'c', x: 0, y: 1 }],
-    edges: [edge('ab', 'a', 'b'), edge('ac', 'a', 'c')],
-    embedding: {
-      rotationSystem: [
-        { vertex: 'a', neighbors: ['c', 'b'] },
-        { vertex: 'b', neighbors: ['a'] },
-        { vertex: 'c', neighbors: ['a'] }
-      ]
-    }
-  };
-  const result = createContactRepresentation(graph);
-
-  assert.equal(result.valid, true, result.problems.join('; '));
-  assert.deepEqual(result.adjacency.get('a'), ['c', 'b']);
-  assert.deepEqual(result.traversalOrder, ['a', 'c', 'b']);
-});
-
-test('rejects a rotation list that disagrees with the edges', () => {
-  const graph = {
-    vertices: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 1, y: 0 }],
-    edges: [edge('ab', 'a', 'b')],
-    embedding: {
-      rotationSystem: [
-        { vertex: 'a', neighbors: [] },
-        { vertex: 'b', neighbors: ['a'] }
-      ]
-    }
-  };
-
-  const result = createContactRepresentation(graph);
-  assert.equal(result.valid, false);
-  assert.ok(result.problems.some((problem) => problem.includes("Rotation for vertex 'a'")));
-});
-
-if (require.main === module) {
-  console.log('Running contact-representation checks...');
-  const graphs = [makeWheelGraph(), makeTwoInnerVertexGraph()];
-  for (const graph of graphs) {
-    const result = createRepresentation(graph);
-    console.log(JSON.stringify({
-      valid: result.valid,
-      traversalOrder: result.traversalOrder,
-      adjacency: [...result.adjacency],
-      problems: result.problems
-    }, null, 2));
+  assert.equal(result.valid, true);
+  assert.equal(result.layoutValid, true, result.layoutProblems.join('; '));
+  assert.equal(result.contacts.length, 2);
+  for (const square of Object.values(result.squares)) {
+    assert.equal(square.width, square.height);
+    assert.ok(square.width > 0);
   }
-}
+  assert.notEqual(result.squareSizes.a, result.squareSizes.c);
+  assert.deepEqual(result.traversalOrder, ['a', 'b', 'c']);
+});
+
+test('accepts disconnected components when their squares do not touch', () => {
+  const result = createContactRepresentation({
+    vertices: [{ id: 'left', x: 0, y: 0 }, { id: 'right', x: 100, y: 0 }],
+    edges: []
+  });
+
+  assert.equal(result.layoutValid, true, result.layoutProblems.join('; '));
+  assert.equal(result.contacts.length, 0);
+  assert.equal(result.traversalOrder.length, 2);
+});
+
+test('rejects diagonal edges instead of returning an approximate layout', () => {
+  const result = createContactRepresentation({
+    vertices: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 30, y: 30 }],
+    edges: [edge('ab', 'a', 'b')]
+  });
+
+  assert.equal(result.valid, true);
+  assert.equal(result.layoutValid, false);
+  assert.ok(result.layoutProblems.some((problem) => problem.includes('same row or column')));
+  assert.deepEqual(result.squares, {});
+});
+
+test('reports incompatible cycles when no positive square sizes exist', () => {
+  const result = createContactRepresentation({
+    vertices: [
+      { id: 'a', x: 0, y: 0 },
+      { id: 'b', x: 30, y: 0 },
+      { id: 'c', x: 60, y: 0 }
+    ],
+    edges: [edge('ab', 'a', 'b'), edge('bc', 'b', 'c'), edge('ca', 'c', 'a')]
+  });
+
+  assert.equal(result.valid, true);
+  assert.equal(result.layoutValid, false);
+  assert.ok(result.layoutProblems.some((problem) => problem.includes('positive square sizes')));
+});
+
+test('rejects squares that overlap or touch without a graph edge', () => {
+  const result = createContactRepresentation({
+    vertices: [
+      { id: 'a', x: 0, y: 0 },
+      { id: 'b', x: 30, y: 0 },
+      { id: 'c', x: 30, y: 35 }
+    ],
+    edges: [edge('ab', 'a', 'b')]
+  });
+
+  assert.equal(result.valid, true);
+  assert.equal(result.layoutValid, false);
+  assert.ok(result.layoutProblems.some((problem) => problem.includes("Squares 'b' and 'c' touch")));
+});
+
+test('validates malformed graph structure before constructing squares', () => {
+  const result = createContactRepresentation({
+    vertices: [{ id: 'a', x: 0, y: 0 }],
+    edges: [edge('bad', 'a', 'missing')]
+  });
+
+  assert.equal(result.valid, false);
+  assert.ok(result.problems.some((problem) => problem.includes('unknown target')));
+});
+
+test('Graph XML round-trip preserves graph data for square construction', () => {
+  const graph = new Graph('path');
+  graph.vertices = [
+    { id: 0, x: 0, y: 0 },
+    { id: 1, x: 30, y: 0 },
+    { id: 2, x: 80, y: 0 }
+  ];
+  graph.edges = [edge(0, 0, 1), edge(1, 1, 2)];
+  const { graph: parsed, problems } = parsePlanarGraphXML(graph.toXML());
+
+  assert.deepEqual(problems, []);
+  assert.deepEqual(parsed.vertices, graph.vertices);
+  assert.deepEqual(parsed.edges, graph.edges);
+  assert.equal(parsed.embedding, undefined);
+  const result = createContactRepresentationFromXML(graph.toXML());
+  assert.equal(result.layoutValid, true, result.layoutProblems.join('; '));
+});
+
+test('XML square construction does not require a planar rotation system', () => {
+  const graph = new Graph('same-ray');
+  graph.vertices = [
+    { id: 0, x: 0, y: 0 },
+    { id: 1, x: 20, y: 0 },
+    { id: 2, x: 60, y: 0 }
+  ];
+  graph.edges = [edge(0, 0, 1), edge(1, 0, 2)];
+
+  const result = createContactRepresentationFromXML(graph.toXML());
+  assert.equal(result.valid, true);
+  assert.equal(result.layoutValid, false);
+  assert.ok(result.layoutProblems.some((problem) => problem.includes('overlap')));
+});
+
+test('malformed XML is reported', () => {
+  for (const xml of ['<planarGraph schemaVersion="1"><vertices></planarGraph>', 'not xml', '<other/>']) {
+    const result = createContactRepresentationFromXML(xml);
+    assert.equal(result.valid, false);
+    assert.ok(result.problems.length > 0, xml);
+  }
+});

@@ -9,6 +9,7 @@ class Buttons {
     this.activeIndex = -1       // which tab is open
     this.hint        = document.getElementById('hint')
     this.planarGraphXml = null  // most recently generated XML, kept in memory for Contact Rep
+    this.contactRepresentation = null
 
     var on = function(id, fn) { document.getElementById(id).addEventListener('click', fn) }
 
@@ -97,82 +98,34 @@ class Buttons {
     URL.revokeObjectURL(url)
   }
 
-  // The XML produced from the active tab is the handoff format to the contact
-  // module. Parse that same XML so the algorithm receives what was exported.
-  graphInputFromXml(xml) {
-    var documentXml = new DOMParser().parseFromString(xml, 'application/xml')
-    if (documentXml.querySelector('parsererror')) {
-      throw new Error('Generated planar-graph XML is invalid')
-    }
-
-    var root = documentXml.documentElement
-    if (root.tagName !== 'planarGraph' || root.getAttribute('schemaVersion') !== '1') {
-      throw new Error('Unsupported planar-graph XML format')
-    }
-
-    var vertices = Array.from(root.querySelectorAll('vertices > vertex')).map(function(vertex) {
-      return {
-        id: vertex.getAttribute('id'),
-        x: Number(vertex.getAttribute('x')),
-        y: Number(vertex.getAttribute('y'))
-      }
-    })
-    var edges = Array.from(root.querySelectorAll('edges > edge')).map(function(edge) {
-      return {
-        id: edge.hasAttribute('id') ? edge.getAttribute('id') : undefined,
-        from: edge.getAttribute('from'),
-        to: edge.getAttribute('to')
-      }
-    })
-    var rotations = Array.from(root.querySelectorAll('rotationSystem > rotation')).map(function(rotation) {
-      return {
-        vertex: rotation.getAttribute('vertex'),
-        neighbors: Array.from(rotation.querySelectorAll('neighbor')).map(function(neighbor) {
-          return neighbor.getAttribute('ref')
-        })
-      }
-    })
-    var outerFace = root.querySelector('outerFace')
-
-    return {
-      name: root.getAttribute('name'),
-      vertices: vertices,
-      edges: edges,
-      embedding: {
-        rotationSystem: rotations,
-        outerFace: outerFace ? outerFace.getAttribute('status') : 'missing'
-      }
-    }
-  }
-
   // Generate planar-graph.xml in memory and pass the graph parsed from that XML
   // into the contact module. Saving a download is a separate, optional action.
   runContactRep() {
     try {
       this.planarGraphXml = this.editor.graph.toXML()
-      var graphInput = this.graphInputFromXml(this.planarGraphXml)
-      var result = ContactRepresentation.createContactRepresentation(graphInput)
+      var result = ContactRepresentation.createContactRepresentationFromXML(this.planarGraphXml)
+      this.contactRepresentation = result
 
       if (result.problems.length > 0) {
+        this.editor.showContactSquares(null)
         this.hint.textContent = 'Could not process the generated planar-graph.xml: ' +
           result.problems.join(' ')
         return
       }
 
-      var adjacencySummary = Array.from(result.adjacency.entries()).map(function(entry) {
-        return entry[0] + ': [' + entry[1].join(', ') + ']'
-      }).join('; ')
-      var traversalSummary = result.traversalOrder.join(' -> ')
       if (!result.layoutValid) {
-        this.hint.textContent = 'Adjacency list from XML edges: ' + adjacencySummary +
-          '. Traversal: ' + traversalSummary +
-          '. Contact layout is still a placeholder.'
+        this.editor.showContactSquares(null)
+        this.hint.textContent = 'Could not construct an exact square-contact representation: ' +
+          result.layoutProblems.join(' ')
         return
       }
 
-      this.hint.textContent = 'Graph processed. Adjacency list: ' + adjacencySummary +
-        '. Contact layout generation is not implemented yet.'
+      this.editor.showContactSquares(result.squares)
+      this.hint.textContent = 'Exact square-contact representation generated: ' +
+        result.contacts.length + ' contacts among ' + Object.keys(result.squares).length + ' squares.'
     } catch (err) {
+      this.contactRepresentation = null
+      this.editor.showContactSquares(null)
       this.hint.textContent = 'Could not run Contact Rep: ' + err.message
     }
   }

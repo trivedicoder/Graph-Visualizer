@@ -15,6 +15,7 @@ class Editor {
     this.mode        = 'add'    // 'add', 'edge', or 'delete'
     this.firstPickId = null     // first vertex picked in edge mode
     this.hoveredId   = null     // vertex under the mouse
+    this.contactSquares = null
 
     // Arrow functions (=>) keep "this" pointing at the Editor inside the handler
     canvas.addEventListener('click',      (e) => this.handleClick(e))
@@ -26,12 +27,19 @@ class Editor {
     this.graph       = graph
     this.firstPickId = null
     this.hoveredId   = null
+    this.contactSquares = null
     this.draw()
   }
 
   setMode(mode) {
     this.mode        = mode
     this.firstPickId = null
+    this.contactSquares = null
+    this.draw()
+  }
+
+  showContactSquares(squares) {
+    this.contactSquares = squares
     this.draw()
   }
 
@@ -46,6 +54,10 @@ class Editor {
 
   //______________________________ Drawing ______________________________
   draw() {                                          // redraw everything from scratch
+    if (this.contactSquares) {
+      this.drawSquareRepresentation()
+      return
+    }
     var hv = this.graph.getVertex(this.hoveredId)   // hovered vertex, if any
     this.drawBackground()
     this.drawGrid(hv)
@@ -109,6 +121,25 @@ class Editor {
     })
   }
 
+  drawSquareRepresentation() {
+    var ctx = this.ctx
+    ctx.fillStyle = 'black'
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height)
+    var colors = ['#55aaff', '#55cc99', '#ffaa55', '#bb88ff', '#ff7799']
+    Object.values(this.contactSquares).forEach(function(square, index) {
+      ctx.fillStyle = colors[index % colors.length]
+      ctx.fillRect(square.x, square.y, square.width, square.height)
+      ctx.strokeStyle = '#ffffff'
+      ctx.lineWidth = 2
+      ctx.strokeRect(square.x, square.y, square.width, square.height)
+      ctx.fillStyle = '#000000'
+      ctx.font = 'bold 12px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(square.id, square.x + square.width / 2, square.y + square.height / 2)
+    })
+  }
+
   drawCoordLabel(v) {                               // "(x, y)" next to the hovered vertex
     var ctx   = this.ctx
     var label = '(' + this.toCoord(v.x) + ', ' + this.toCoord(v.y) + ')'
@@ -126,6 +157,7 @@ class Editor {
   }
 
   handleClick(event) {
+    if (this.contactSquares) return
     var p = this.mousePos(event)
     if (this.mode === 'add')    this.handleAdd(p.x, p.y)
     if (this.mode === 'edge')   this.handleEdge(p.x, p.y)
@@ -166,6 +198,7 @@ class Editor {
   }
 
   handleMouseMove(event) {
+    if (this.contactSquares) return
     var p = this.mousePos(event)
     var v = this.graph.vertexAt(p.x, p.y, this.RADIUS)
     this.setHovered(v ? v.id : null)
