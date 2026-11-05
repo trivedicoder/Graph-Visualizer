@@ -16,6 +16,7 @@
     <button id="btnEdge">Add Edge</button>
     <button id="btnDelete">Delete</button>
     <button id="btnClear">Clear All</button>
+    <button id="btnContactRep">Contact Rep</button>
     <button id="btnredo">Redo</button>
     <button id="btnundo">Undo</button>
   
@@ -25,6 +26,8 @@
 
   <div id = "toprightbar">
     <button id="btnSave">Save Graph</button>
+    <!-- Optional download; Contact Rep generates and uses this XML in memory. -->
+    <button id="btnExportXml">Save XML</button>
     <button id="btnLoad">Load Graph</button>
   </div>
 
@@ -40,6 +43,8 @@
   src="js/Graph.js">  </script>
   <script
   src="js/Editor.js"></script>
+  <!-- The contact-representation prototype is shared with its Node tests until it moves into Frontend/js. -->
+  <script src="../Tests/Contact%20rep-drawing/Contact%20rep.js"></script>
   <script
   src="js/Buttons.js"></script>
   <script

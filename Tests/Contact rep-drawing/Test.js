@@ -3,8 +3,14 @@ const assert = require('node:assert/strict');
 const { createContactRepresentation } = require('./Contact rep.js');
 
 const poles = { N: 'N', E: 'E', S: 'S', W: 'W' };
+const contactPoles = { north: poles.N, east: poles.E, south: poles.S, west: poles.W };
 const outer = [['N', 'E'], ['E', 'S'], ['S', 'W'], ['W', 'N']].map(([from, to], i) => ({ id: `o${i}`, from, to }));
 const edge = (id, from, to) => ({ id, from, to });
+
+// Contact Rep builds its adjacency list from edges; no st-order is supplied.
+function createRepresentation(graph) {
+  return createContactRepresentation(graph, { poles: contactPoles });
+}
 
 function makeWheelGraph() {
   return {
@@ -48,34 +54,79 @@ function makeTwoInnerVertexGraph() {
   };
 }
 
-test('wheel graph with one inner vertex builds a valid contact representation', () => {
+test('wheel graph builds adjacency and traverses without a supplied st-order', () => {
   const graph = makeWheelGraph();
-  const result = createContactRepresentation(graph, poles);
+  const result = createRepresentation(graph);
 
   assert.equal(result.valid, true, result.problems.join('; '));
-  assert.ok(result.order.includes('N'));
-  assert.ok(result.order.includes('C'));
+  assert.deepEqual(result.adjacency.get('C'), ['N', 'E', 'S', 'W']);
+  assert.equal(result.traversalOrder.length, graph.vertices.length);
+  assert.ok(result.traversalOrder.includes('N'));
+  assert.ok(result.traversalOrder.includes('C'));
   assert.ok(result.rectangles.C);
-  assert.ok(result.contacts.some((contact) => contact.from === 'C' && contact.to === 'N'));
+  assert.equal(result.layoutValid, false, 'rectangle placement is still a placeholder');
 });
 
-test('two inner vertices build a valid contact representation', () => {
+test('two inner vertices are connected through the edge-derived adjacency list', () => {
   const graph = makeTwoInnerVertexGraph();
-  const result = createContactRepresentation(graph, poles);
+  const result = createRepresentation(graph);
 
   assert.equal(result.valid, true, result.problems.join('; '));
-  assert.ok(result.order.includes('a'));
-  assert.ok(result.order.includes('b'));
+  assert.deepEqual(result.adjacency.get('a'), ['W', 'N', 'S', 'b']);
+  assert.equal(result.traversalOrder.length, graph.vertices.length);
+  assert.ok(result.traversalOrder.includes('a'));
+  assert.ok(result.traversalOrder.includes('b'));
   assert.ok(result.rectangles.a);
   assert.ok(result.rectangles.b);
-  assert.ok(result.contacts.some((contact) => contact.from === 'a' && contact.to === 'b'));
+  assert.equal(result.layoutValid, false, 'rectangle placement is still a placeholder');
+});
+
+test('XML rotation system controls neighbor traversal order', () => {
+  const graph = {
+    vertices: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 1, y: 0 }, { id: 'c', x: 0, y: 1 }],
+    edges: [edge('ab', 'a', 'b'), edge('ac', 'a', 'c')],
+    embedding: {
+      rotationSystem: [
+        { vertex: 'a', neighbors: ['c', 'b'] },
+        { vertex: 'b', neighbors: ['a'] },
+        { vertex: 'c', neighbors: ['a'] }
+      ]
+    }
+  };
+  const result = createContactRepresentation(graph);
+
+  assert.equal(result.valid, true, result.problems.join('; '));
+  assert.deepEqual(result.adjacency.get('a'), ['c', 'b']);
+  assert.deepEqual(result.traversalOrder, ['a', 'c', 'b']);
+});
+
+test('rejects a rotation list that disagrees with the edges', () => {
+  const graph = {
+    vertices: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 1, y: 0 }],
+    edges: [edge('ab', 'a', 'b')],
+    embedding: {
+      rotationSystem: [
+        { vertex: 'a', neighbors: [] },
+        { vertex: 'b', neighbors: ['a'] }
+      ]
+    }
+  };
+
+  const result = createContactRepresentation(graph);
+  assert.equal(result.valid, false);
+  assert.ok(result.problems.some((problem) => problem.includes("Rotation for vertex 'a'")));
 });
 
 if (require.main === module) {
   console.log('Running contact-representation checks...');
   const graphs = [makeWheelGraph(), makeTwoInnerVertexGraph()];
   for (const graph of graphs) {
-    const result = createContactRepresentation(graph, poles);
-    console.log(JSON.stringify({ valid: result.valid, order: result.order, problems: result.problems }, null, 2));
+    const result = createRepresentation(graph);
+    console.log(JSON.stringify({
+      valid: result.valid,
+      traversalOrder: result.traversalOrder,
+      adjacency: [...result.adjacency],
+      problems: result.problems
+    }, null, 2));
   }
 }
