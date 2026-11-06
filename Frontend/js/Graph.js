@@ -127,9 +127,11 @@ class Graph {
     return { vertices: this.vertices, edges: this.edges }
   }
 
+  /////////////////////////////////////////
+  // XML time! The planar-graph.xml format is used for saving and loading graphs, and for passing them
   // Infer each vertex's clockwise neighbor order from the current drawing.
   // This is only an embedding candidate: it does not detect crossings or prove planarity.
-  
+  /////////////////////////////////////////
   toRotationSystem() {
     var verticesById = new Map() // vertex id -> vertex object
     var neighborsById = new Map()
