@@ -1,4 +1,4 @@
-// ---------- planar-graph XML (schemaVersion 1) <-> graph object ----------
+// ---------- TESTING planar-graph XML (schemaVersion 1) <-> graph object ----------
 //
 // Graph.toXML() writes the file; parsePlanarGraphXML() reads it back into the shape
 // Contact rep.js expects:
@@ -29,6 +29,7 @@
   // Returns the root element as { name, attrs, children }. Text content is ignored
   // (this schema keeps everything in attributes).
   function parseXmlTree(text) {
+    // https://www.w3.org/TR/xml/#syntax
     const token = /<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!DOCTYPE[^>]*>|<\/\s*([A-Za-z_][\w.:-]*)\s*>|<([A-Za-z_][\w.:-]*)((?:\s+[A-Za-z_][\w.:-]*\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>|([^<]+)|(<)/g;
     const attrPattern = /([A-Za-z_][\w.:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
     const document = { name: '#document', attrs: {}, children: [] };

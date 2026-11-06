@@ -1,5 +1,7 @@
 
-// ---------- Contact representation scaffold ----------
+// ---------- Contact representation scaffold HIGHLY TESTING (Just wanted to see how this could go) ----------
+// 
+
 // Input graph: { vertices: [{ id, x, y }], edges: [{ id?, from, to }] }
 //
 // Coordinate convention for rectangles: screen space (SVG / canvas),
@@ -22,7 +24,7 @@ const RelApi = typeof require === 'function' ? require('./REL.js') : window.Plan
 const XmlApi = typeof require === 'function' ? require('./PlanarXML.js') : window.PlanarXML;
 
 // ----------------- constants ----------
-const EPS = 1e-9;
+const EPS = 100000000;
 
 
 // ---------- helpers ----------

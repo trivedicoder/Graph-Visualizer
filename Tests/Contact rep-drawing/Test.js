@@ -1,4 +1,6 @@
 
+
+// TESTING TESTING 
 const test = require('node:test'); 
 const assert = require('node:assert/strict');
 const { createContactRepresentation, createContactRepresentationFromXML } = require('./Contact rep.js');
@@ -8,9 +10,7 @@ const Graph = require('../../Frontend/js/Graph.js');
 
 // The tests follow the graph through the whole pipeline:
 // edges give adjacency, coordinates or XML give the polar order, and the poles
-// set the embedding's direction. The REL checks the graph and gives its canonical
-// order. A valid REL can then be turned into a rectangular layout.
-// Small examples test each step; generated graphs test the full XML-to-layout flow.
+// set the embedding's direction.
 const poles = { N: 'N', E: 'E', S: 'S', W: 'W' };
 const contactPoles = { north: poles.N, east: poles.E, south: poles.S, west: poles.W };
 const outer = [['N', 'E'], ['E', 'S'], ['S', 'W'], ['W', 'N']].map(([from, to], i) => ({ id: `o${i}`, from, to }));
