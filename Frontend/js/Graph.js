@@ -129,8 +129,9 @@ class Graph {
 
   // Infer each vertex's clockwise neighbor order from the current drawing.
   // This is only an embedding candidate: it does not detect crossings or prove planarity.
+  
   toRotationSystem() {
-    var verticesById = new Map()
+    var verticesById = new Map() // vertex id -> vertex object
     var neighborsById = new Map()
     var occupiedPositions = new Set()
     this.vertices.forEach(function(v) {
@@ -163,6 +164,7 @@ class Graph {
       neighborsById.get(e.to).add(e.from)
     })
 
+    // Sort each vertex's neighbors in clockwise order around the vertex.
     return this.vertices.map(function(v) {
       var neighbors = Array.from(neighborsById.get(v.id))
       neighbors.sort(function(a, b) {
@@ -171,6 +173,8 @@ class Graph {
         return Math.atan2(va.y - v.y, va.x - v.x) -
           Math.atan2(vb.y - v.y, vb.x - v.x)
       })
+
+    
       for (var i = 0; neighbors.length > 1 && i < neighbors.length; i++) {
         var a = verticesById.get(neighbors[i])
         var b = verticesById.get(neighbors[(i + 1) % neighbors.length])
@@ -178,6 +182,8 @@ class Graph {
         var ay = a.y - v.y
         var bx = b.x - v.x
         var by = b.y - v.y
+
+        // Check for collinear edges that point in the same direction (which would make the neighbor order ambiguous).
         if (ax * by - ay * bx === 0 && ax * bx + ay * by > 0) {
           throw new Error('Cannot derive a unique circular neighbor order for collinear edges')
         }
@@ -186,8 +192,7 @@ class Graph {
     })
   }
 
-  // Export version 1 of the planar-graph input format. The rotation system is
-  // only a candidate inferred from canvas coordinates; no planarity test runs here
+  // Export the planar-graph input format.
   // (REL.js checks planarity with Euler's formula when the XML is processed).
   // options.poles = { north, east, south, west } vertex ids marks the outer face;
   // without it the outer face is left "not-selected" and REL.js detects it.

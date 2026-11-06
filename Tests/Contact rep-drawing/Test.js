@@ -6,18 +6,23 @@ const { parsePlanarGraphXML } = require('./PlanarXML.js');
 const PlanarREL = require('./REL.js');
 const Graph = require('../../Frontend/js/Graph.js');
 
+// The tests follow the graph through the whole pipeline:
+// edges give adjacency, coordinates or XML give the polar order, and the poles
+// set the embedding's direction. The REL checks the graph and gives its canonical
+// order. A valid REL can then be turned into a rectangular layout.
+// Small examples test each step; generated graphs test the full XML-to-layout flow.
 const poles = { N: 'N', E: 'E', S: 'S', W: 'W' };
 const contactPoles = { north: poles.N, east: poles.E, south: poles.S, west: poles.W };
 const outer = [['N', 'E'], ['E', 'S'], ['S', 'W'], ['W', 'N']].map(([from, to], i) => ({ id: `o${i}`, from, to }));
 const edge = (id, from, to) => ({ id, from, to });
 const TRIALS = Number(process.env.FUZZ_TRIALS || 120);
 
-// Contact Rep builds its adjacency list from edges; no st-order is supplied.
+// Use the same poles for each example; let the code find the canonical order.
 function createRepresentation(graph) {
   return createContactRepresentation(graph, { poles: contactPoles });
 }
 
-// Same circular order, possibly starting at a different neighbor.
+// A circular order is the same even if it starts at a different neighbor.
 function assertSameCircularOrder(actual, expected) {
   assert.equal(actual.length, expected.length, `${actual} vs ${expected}`);
   const start = actual.indexOf(expected[0]);
@@ -25,19 +30,18 @@ function assertSameCircularOrder(actual, expected) {
   assert.deepEqual(actual.slice(start).concat(actual.slice(0, start)), expected);
 }
 
-// Count the number of edges in a graph.
 function graphEdgeCount(graph) {
   return graph.edges.length;
 }
 
-// Return a map of edges to their colors, for testing the REL.
+// Return the red and blue edges in the REL.
 function colorsOf(result) {
   const colors = {};
   for (const e of result.rel.edges) if (e.color) colors[`${e.from}->${e.to}`] = e.color;
   return colors;
 }
 
-// Screen coordinates (y grows down), like the editor: N is on top.
+// These small examples have known embeddings, RELs, and layouts.
 function makeWheelGraph() {
   return {
     vertices: [
@@ -47,7 +51,7 @@ function makeWheelGraph() {
       { id: 'W', x: -100, y: 0 },
       { id: 'C', x: 0, y: 0 }
     ],
-    // The outer edges are in clockwise order, so the embedding is clockwise.
+    // The outer cycle is clockwise; C connects to all four poles.
     edges: [
       ...outer,
       edge('c1', 'C', 'N'),
@@ -58,7 +62,7 @@ function makeWheelGraph() {
   };
 }
 
-// Two inner vertices, each connected to all four outer vertices and to each other. The embedding is clockwise.
+// A clockwise example with two inner vertices joined by an edge.
 function makeTwoInnerVertexGraph() {
   return {
     vertices: [
@@ -70,7 +74,6 @@ function makeTwoInnerVertexGraph() {
       { id: 'b', x: 40, y: 0 }
     ],
 
-    // The outer edges are in clockwise order, so the embedding is clockwise. The inner edge a-b is also clockwise with respect to the outer face.
     edges: [
       ...outer,
       edge('a1', 'a', 'W'),
@@ -84,15 +87,16 @@ function makeTwoInnerVertexGraph() {
   };
 }
 
-// ---------- adjacency + circular orders ----------
-// The adjacency list is built from the edges, and the circular order is derived from the coordinates (or from the XML if present). The traversal order is a depth-first search starting from the north pole.
+// ---------- Input graph and embedding ----------
+// Edges give the adjacency list. Coordinates or an XML rotation system give the
+// polar order used for traversal.
 test('wheel graph builds adjacency and traverses without a supplied st-order', () => {
   const graph = makeWheelGraph();
   const result = createRepresentation(graph);
 
   assert.equal(result.valid, true, result.problems.join('; '));
   assert.equal(result.rotationSource, 'coordinates');
-  // Polar ordering, clockwise on screen.
+  // C's neighbors are in clockwise polar order, starting at N.
   assertSameCircularOrder(result.adjacency.get('C'), ['N', 'E', 'S', 'W']);
   assert.equal(result.traversalOrder.length, graph.vertices.length);
   assert.ok(result.traversalOrder.includes('N'));
@@ -101,13 +105,10 @@ test('wheel graph builds adjacency and traverses without a supplied st-order', (
   assert.equal(result.layoutValid, true, result.layoutProblems.join('; '));
 });
 
-// Two inner vertices, each connected to all four outer vertices and to each other. The embedding is clockwise.
 test('two inner vertices are connected through the edge-derived adjacency list', () => {
   const graph = makeTwoInnerVertexGraph();
   const result = createRepresentation(graph);
 
-  // The adjacency list is built from the edges, and the circular order is derived from the coordinates (or from the XML if present).
-  // The traversal order is a depth-first search starting from the north pole.
   assert.equal(result.valid, true, result.problems.join('; '));
   assertSameCircularOrder(result.adjacency.get('a'), ['N', 'b', 'S', 'W']);
   assert.equal(result.traversalOrder.length, graph.vertices.length);
@@ -118,7 +119,7 @@ test('two inner vertices are connected through the edge-derived adjacency list',
   assert.equal(result.layoutValid, true, result.layoutProblems.join('; '));
 });
 
-// The REL is derived from the embedding and the adjacency list. The canonical order is derived from the REL.
+// Use the XML rotation system instead of calculating the order from coordinates.
 test('XML rotation system controls neighbor traversal order', () => {
   const graph = {
     vertices: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 1, y: 0 }, { id: 'c', x: 0, y: 1 }],
@@ -133,7 +134,6 @@ test('XML rotation system controls neighbor traversal order', () => {
   };
   const result = createContactRepresentation(graph);
 
-  // The REL is derived from the embedding and the adjacency list. The canonical order is derived from the REL.
   assert.equal(result.valid, true, result.problems.join('; '));
   assert.equal(result.rotationSource, 'xml');
   assert.deepEqual(result.adjacency.get('a'), ['c', 'b']);
@@ -141,7 +141,7 @@ test('XML rotation system controls neighbor traversal order', () => {
   assert.equal(result.relValid, false, 'a path is not a PTP graph');
 });
 
-// The REL is derived from the embedding and the adjacency list. The canonical order is derived from the REL.
+// Each neighbor in the rotation system must have an edge.
 test('rejects a rotation list that disagrees with the edges', () => {
   const graph = {
     vertices: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 1, y: 0 }],
@@ -154,12 +154,11 @@ test('rejects a rotation list that disagrees with the edges', () => {
     }
   };
 
-  // The REL is derived from the embedding and the adjacency list. The canonical order is derived from the REL.
   const result = createContactRepresentation(graph);
   assert.equal(result.valid, false);
   assert.ok(result.problems.some((problem) => problem.includes("Rotation for vertex 'a'")));
 });
-// Test that overlapping edges make the circular order undefined
+// Overlapping edges from one vertex have no clear polar order.
 test('overlapping edges make the circular order undefined', () => {
   const graph = {
     vertices: [{ id: 'a', x: 0, y: 0 }, { id: 'b', x: 1, y: 0 }, { id: 'c', x: 2, y: 0 }],
@@ -170,7 +169,8 @@ test('overlapping edges make the circular order undefined', () => {
   assert.ok(result.problems.some((problem) => problem.includes('overlap')));
 });
 
-// ---------- refined canonical order + REL ----------
+// ---------- REL and canonical order ----------
+// The embedding and poles determine the REL, which gives the canonical order.
 
 test('wheel graph: canonical order and REL', () => {
   const result = createRepresentation(makeWheelGraph());
@@ -193,7 +193,7 @@ test('two inner vertices: canonical order and REL', () => {
   });
 });
 
-// Test that the rectangular dual is a pinwheel frame around the two inner vertices
+// In the rectangular dual, each graph edge should be one shared rectangle side.
 test('two inner vertices: rectangular dual is a pinwheel frame around a and b', () => {
   const result = createRepresentation(makeTwoInnerVertexGraph());
   assert.equal(result.layoutValid, true, result.layoutProblems.join('; '));
@@ -210,7 +210,7 @@ test('two inner vertices: rectangular dual is a pinwheel frame around a and b', 
   assert.equal(result.contacts.length, graphEdgeCount(makeTwoInnerVertexGraph()));
 });
 
-// Test that if the edge a-b is missing, the REL is invalid and there are no rectangles
+// Without a valid REL, no rectangular layout can be made.
 test('no REL means no rectangles, with the reason', () => {
   const quad = makeTwoInnerVertexGraph();
   quad.edges = quad.edges.filter((e) => e.id !== 'ab');
@@ -220,7 +220,7 @@ test('no REL means no rectangles, with the reason', () => {
   assert.ok(result.layoutProblems[0].includes('No rectangular dual'));
 });
 
-// Test that y-up coordinates give the same REL (orientation is normalized from the poles)
+// Pole orientation keeps the REL the same when the screen's y direction is reversed.
 test('y-up coordinates give the same REL (orientation is normalized from the poles)', () => {
   const graph = makeTwoInnerVertexGraph();
   graph.vertices.forEach((v) => { v.y = -v.y; });
@@ -230,7 +230,7 @@ test('y-up coordinates give the same REL (orientation is normalized from the pol
   assert.deepEqual(result.canonicalOrder, ['S', 'W', 'a', 'b', 'E', 'N']);
 });
 
-// Test that if the poles are not given, they are detected from the drawing
+// Poles can be given directly or found from the drawing.
 test('poles are detected from the drawing when none are given', () => {
   const result = createContactRepresentation(makeTwoInnerVertexGraph());
   assert.equal(result.polesSource, 'auto');
@@ -238,9 +238,9 @@ test('poles are detected from the drawing when none are given', () => {
   assert.equal(result.relValid, true, result.relProblems.join('; '));
 });
 
-// Test that if the poles are given, they are used and the REL is valid
+// A graph can be valid and planar but still fail the REL's PTP rules.
 test('non-PTP graphs are explained, not laid out', () => {
-  // Quadrilateral inner face (missing diagonal a-b).
+  // Without a-b, the inner face has four sides instead of three.
   const quad = makeTwoInnerVertexGraph();
   quad.edges = quad.edges.filter((e) => e.id !== 'ab');
   let result = createRepresentation(quad);
@@ -248,16 +248,15 @@ test('non-PTP graphs are explained, not laid out', () => {
   assert.equal(result.relValid, false);
   assert.ok(result.relProblems.some((p) => p.includes('not a triangle')), result.relProblems.join('; '));
 
-  // Separating triangle: a vertex inside face C-N-E of the wheel
+  // A vertex inside this triangle makes it a separating triangle.
   const sep = makeWheelGraph();
   sep.vertices.push({ id: 'x', x: 30, y: -30 });
   sep.edges.push(edge('x1', 'x', 'C'), edge('x2', 'x', 'N'), edge('x3', 'x', 'E'));
   result = createRepresentation(sep);
   assert.ok(result.relProblems.some((p) => p.includes('separating triangle')), result.relProblems.join('; '));
 
-  // Five outer vertices
+  // A PTP graph must have four outer poles.
   const five = {
-    // The five outer vertices are in clockwise order, so the embedding is clockwise. The inner vertex M is connected to all five outer vertices.
     vertices: [
       { id: 'A', x: 0, y: -100 }, { id: 'B', x: 95, y: -30 }, { id: 'C', x: 60, y: 80 },
       { id: 'D', x: -60, y: 80 }, { id: 'F', x: -95, y: -30 }, { id: 'M', x: 0, y: 0 }
@@ -270,8 +269,7 @@ test('non-PTP graphs are explained, not laid out', () => {
 });
 
 test('crossing edges fail the Euler check', () => {
-  // Same graph as makeTwoInnerVertexGraph, but a and b swap sides, so a-W and b-E cross.
-  // The polar orders read off this drawing are not a planar embedding.
+  // Swapping a and b makes the coordinate-based embedding non-planar.
   const graph = makeTwoInnerVertexGraph();
   graph.vertices.find((v) => v.id === 'a').x = 40;
   graph.vertices.find((v) => v.id === 'a').y = 10;
@@ -283,19 +281,19 @@ test('crossing edges fail the Euler check', () => {
   assert.ok(result.relProblems.some((p) => p.includes('not planar')), result.relProblems.join('; '));
 });
 
-// ---------- XML round trip ----------
-
-// Draw the two-inner-vertex graph in the editor's pixel grid (ORIGIN 50, GRID 50).
+// ---------- XML input ----------
+// The editor saves vertices, edges, poles, and rotation system to XML.
+// The parser reads them back so Contact Rep can build the embedding and REL.
 function makeEditorGraph() {
   const g = new Graph('two-inner');
   [[250, 50], [450, 250], [250, 450], [50, 250], [200, 250], [300, 250]]
-    .forEach(([x, y]) => g.addVertex(x, y));         // ids 0..5 = N, E, S, W, a, b
+    .forEach(([x, y]) => g.addVertex(x, y));
   [[0, 1], [1, 2], [2, 3], [3, 0], [4, 3], [4, 0], [4, 2], [4, 5], [5, 0], [5, 2], [5, 1]]
     .forEach(([from, to]) => g.addEdge(from, to));
   return g;
 }
 
-// Test that the XML round trip preserves the graph structure and circular orders
+// Check that XML keeps the graph and its rotation system, even without selected poles.
 test('Graph.toXML -> parsePlanarGraphXML keeps vertices, edges and circular orders', () => {
   const g = makeEditorGraph();
   const xml = g.toXML();
@@ -312,13 +310,12 @@ test('Graph.toXML -> parsePlanarGraphXML keeps vertices, edges and circular orde
   );
 });
 
-// 
+// Selected poles in the XML let parsing continue through REL creation.
 test('XML with selected poles goes all the way to a REL', () => {
   const g = makeEditorGraph();
   const xml = g.toXML({ poles: { north: 0, east: 1, south: 2, west: 3 } });
   assert.match(xml, /<outerFace status="selected">/);
 
-  // Test that the XML round trip preserves the graph structure and circular orders
   const result = createContactRepresentationFromXML(xml);
   assert.equal(result.valid, true, result.problems.join('; '));
   assert.equal(result.rotationSource, 'xml');
@@ -327,7 +324,7 @@ test('XML with selected poles goes all the way to a REL', () => {
   assert.deepEqual(result.canonicalOrder, [2, 3, 4, 5, 1, 0]);
 });
 
-// Test that counterclockwise XML is read back as clockwise
+// The parser converts either direction to the pipeline's clockwise convention.
 test('counterclockwise XML is read back as clockwise', () => {
   const xml = makeEditorGraph().toXML().replace('direction="clockwise"', 'direction="counterclockwise"');
   const { graph } = parsePlanarGraphXML(xml);
@@ -337,7 +334,7 @@ test('counterclockwise XML is read back as clockwise', () => {
   }
 });
 
-// Test that malformed XML is reported
+// Bad XML should report a problem before the later pipeline steps run.
 test('malformed XML is reported', () => {
   for (const bad of ['<planarGraph schemaVersion="1"><vertices></planarGraph>', 'not xml', '<other/>']) {
     const result = createContactRepresentationFromXML(bad);
@@ -346,7 +343,9 @@ test('malformed XML is reported', () => {
   }
 });
 
-// ---------- fuzz: random PTP graphs through the whole chain ----------
+// ---------- End-to-end generated graphs ----------
+// Generated graphs test the same graph -> embedding -> XML -> REL -> layout flow
+// with many shapes.
 
 function makeRandom(seed) {
   let s = seed >>> 0;
@@ -359,40 +358,36 @@ function makeRandom(seed) {
   };
 }
 
-// Random guillotine dissection of a rectangle plus four pole strips. Its contact graph is
-// always a PTP graph (no four rectangles meet in a point with random real cuts).
+// Split a rectangle into smaller ones and add four outer pole rectangles.
+// Their shared sides make a PTP graph for testing.
 function randomDissectionGraph(random, count) {
 
-  // Start with a single rectangle, and repeatedly split a random rectangle either vertically or horizontally.
+  // Split one rectangle into two that share a side.
   const rects = [{ x1: 0, y1: 0, x2: 1, y2: 1 }];
   while (rects.length < count) {
-    const i = Math.floor(random() * rects.length); // pick a random rectangle to split
-    const r = rects[i]; // 
-    const t = 0.25 + 0.5 * random(); // split at a random point in the middle half of the rectangle
+    const i = Math.floor(random() * rects.length);
+    const r = rects[i];
+    const t = 0.25 + 0.5 * random();
     
-    // Split the rectangle either vertically or horizontally, creating two new rectangles in place of the old one.
     if (random() < 0.5) {
       const x = r.x1 + t * (r.x2 - r.x1);
       rects.splice(i, 1, { ...r, x2: x }, { ...r, x1: x });
     } 
-    // Split the rectangle either vertically or horizontally, creating two new rectangles in place of the old one.
     else {
       const y = r.y1 + t * (r.y2 - r.y1);
       rects.splice(i, 1, { ...r, y2: y }, { ...r, y1: y });
     }
   }
 
-  // Add four pole strips around the rectangle, so that the contact graph is always a PTP graph (no four rectangles meet in a point).
   const all = rects.map((r, i) => ({ id: i, ...r }));
 
-  // Add four pole strips around the rectangle, so that the contact graph is always a PTP graph (no four rectangles meet in a point).
+  // Add a rectangle for each outer pole.
   all.push(
     { id: 'N', x1: 0, y1: -1, x2: 1, y2: 0 }, { id: 'S', x1: 0, y1: 1, x2: 1, y2: 2 },
     { id: 'W', x1: -1, y1: -1, x2: 0, y2: 2 }, { id: 'E', x1: 1, y1: -1, x2: 2, y2: 2 }
   );
 
-  // Two rectangles touch if they overlap in x and y, or if they are adjacent in x or y. 
-  // The latter is detected by checking if the distance between the edges is less than a small epsilon.
+  // Rectangles count as touching only when they share a side, not just a corner.
   const touch = (a, b) => {
     const ox = Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1);
     const oy = Math.min(a.y2, b.y2) - Math.max(a.y1, b.y1);
@@ -401,7 +396,7 @@ function randomDissectionGraph(random, count) {
       ((near(a.y2, b.y1) || near(b.y2, a.y1)) && ox > 1e-12);
   };
 
-  // Build the contact graph edges from the rectangles. The poles are not connected to each other.
+  // Make an edge for each shared side; opposite poles are not connected.
   const edges = [];
   for (let i = 0; i < all.length; i++) {
     for (let j = i + 1; j < all.length; j++) {
@@ -412,26 +407,24 @@ function randomDissectionGraph(random, count) {
     }
   }
 
-  // Return the rectangle ids and the contact graph edges. The poles are always present
+  // Return the vertex ids and edges.
   return { ids: all.map((r) => r.id), edges };
 }
 
-// Tutte embedding: poles fixed on a convex quadrilateral, every inner vertex at the
-// average of its neighbors. Planar straight-line for 3-connected graphs.
+// Fix the poles on a quadrilateral, then place each inner vertex at the average
+// of its neighbors. These coordinates are used to find the polar order.
 function tutteCoordinates(ids, edges) { 
 
-  // Fix the poles at the corners of a square, and place every other vertex at the average of its neighbors. 
-  // Iterate until convergence.
+  // Set the pole positions and build each vertex's neighbor list.
   const fixed = { N: [0, -100], E: [100, 0], S: [0, 100], W: [-100, 0] };
   const nbrs = new Map(ids.map((id) => [id, []]));
   for (const [a, b] of edges) { nbrs.get(a).push(b); nbrs.get(b).push(a); }
   const pos = new Map(ids.map((id) => [id, fixed[id] ? [...fixed[id]] : [0, 0]]));
   
-  // Iterate until convergence.
   for (let iter = 0; iter < 20000; iter++) {
     let delta = 0;
 
-    // Iterate over all vertices, updating the position of each non-fixed vertex to the average of its neighbors.
+    // Move inner vertices toward their neighbors' average; stop when they settle.
     for (const id of ids) {
       if (fixed[id]) continue;
       const list = nbrs.get(id);
@@ -441,26 +434,25 @@ function tutteCoordinates(ids, edges) {
       pos.set(id, [x, y]);
     }
 
-    // Stop if the maximum change in position is less than a small threshold.
     if (delta < 1e-12) break;
   }
   return pos;
 }
 
-// Random edge flips (keeping the graph PTP) to get graphs that are not just guillotine duals.
+// Try edge flips to make different graphs. Keep only flips that still pass
+// the embedding and PTP checks.
 function randomFlips(random, ids, edges, flips) {
   
-  // Randomly flip edges in the contact graph while maintaining the PTP .
   for (let f = 0; f < flips; f++) {
     
-    // Compute the Tutte embedding of the current graph to get coordinates for the vertices.
+    // Find the current embedding to choose a replacement edge.
     const pos = tutteCoordinates(ids, edges);
     const vertices = ids.map((id) => ({ id, x: pos.get(id)[0], y: pos.get(id)[1] }));
     const adjacency = new Map(ids.map((id) => [id, []]));
     for (const [a, b] of edges) { adjacency.get(a).push(b); adjacency.get(b).push(a); }
     const { rotation } = PlanarREL.rotationFromCoordinates(vertices, adjacency);
 
-    // Pick a random edge to flip. The edge must not be between two poles, and the new edge must not already exist.
+    // Keep pole edges and avoid adding an edge twice.
     const k = Math.floor(random() * edges.length);
     const [u, v] = edges[k];
     if (['N', 'E', 'S', 'W'].includes(u) && ['N', 'E', 'S', 'W'].includes(v)) continue;
@@ -469,7 +461,7 @@ function randomFlips(random, ids, edges, flips) {
     const a = list[(i + 1) % list.length], b = list[(i - 1 + list.length) % list.length];
     if (a === b || adjacency.get(a).includes(b)) continue;
 
-    // Flip the edge u-v to a-b, and check if the new graph is still PTP by computing its Tutte embedding and REL.
+    // Keep the new edge only if its embedding and REL still pass the PTP checks.
     const candidate = edges.filter((_, j) => j !== k).concat([[a, b]]);
     const p2 = tutteCoordinates(ids, candidate);
     const v2 = ids.map((id) => ({ id, x: p2.get(id)[0], y: p2.get(id)[1] }));
@@ -484,25 +476,24 @@ function randomFlips(random, ids, edges, flips) {
   return edges;
 }
 
-// Random PTP graphs: editor Graph -> XML -> circular orders -> REL -> rectangular dual
+// Run generated graphs through the same XML, embedding, REL, and layout steps
+// used for graphs loaded by the app.
 test('random PTP graphs: editor Graph -> XML -> circular orders -> REL -> rectangular dual', () => {
-  const random = makeRandom(20261105); // reproducible random numbers
+  const random = makeRandom(20261105);
   let checked = 0;
 
-  // Generate random PTP graphs by creating a random dissection graph, optionally flipping some edges, computing the Tutte embedding, and checking that the contact representation is valid and has a valid REL and rectangular dual.
   for (let trial = 0; trial < TRIALS; trial++) {
     const count = 2 + Math.floor(random() * 24);
     const { ids, edges: dissectionEdges } = randomDissectionGraph(random, count);
     const edges = trial % 2 ? randomFlips(random, ids, dissectionEdges, 15) : dissectionEdges;
     const pos = tutteCoordinates(ids, edges);
 
-    // Create a Graph object with the vertices and edges, and convert it to XML. Then create a contact representation from the XML and check that it is valid, has the correct poles, has a valid REL, and has a valid rectangular dual.
+    // Save the graph with the editor's model and XML format.
     const g = new Graph(`fuzz-${trial}`);
     g.vertices = ids.map((id) => ({ id, x: pos.get(id)[0], y: pos.get(id)[1] }));
     g.edges = edges.map(([from, to], i) => ({ id: i, from, to }));
 
-    // Randomly decide whether to include the poles in the XML or not. 
-    // If included, the poles are specified in the XML; if not, they are detected from the drawing.
+    // Sometimes save the poles in XML; otherwise find them from coordinates.
     const withPoles = trial % 3 === 0;
     const xml = g.toXML(withPoles ? { poles: contactPoles } : undefined);
     const result = createContactRepresentationFromXML(xml);
@@ -512,14 +503,13 @@ test('random PTP graphs: editor Graph -> XML -> circular orders -> REL -> rectan
     assert.deepEqual(result.poles, contactPoles, context);
     assert.equal(result.relValid, true, `${context}: ${result.relProblems.join('; ')}`);
 
-    // The canonical order is a topological sort of the REL, starting from the south pole and ending at the north pole. 
-    // The first two vertices in the order are the south and west poles, and the last vertex is the north pole.
+    // Check the REL order and that it labels every non-pole edge.
     const order = result.canonicalOrder;
     assert.equal(new Set(order).size, ids.length, context);
     assert.deepEqual([order[0], order[1], order[order.length - 1]], ['S', 'W', 'N'], context);
     assert.equal(result.rel.red.length + result.rel.blue.length, edges.length - 4, context);
     
-    // Rectangular dual: every edge is a shared side, nothing else touches or overlaps.
+    // Check that every graph edge matches one shared rectangle side.
     assert.equal(result.layoutValid, true, `${context}: ${result.layoutProblems.join('; ')}`);
     assert.equal(result.contacts.length, edges.length, context);
     checked++;
@@ -527,11 +517,10 @@ test('random PTP graphs: editor Graph -> XML -> circular orders -> REL -> rectan
   assert.equal(checked, TRIALS);
 });
 
-// Run the contact-representation checks if this file is executed directly
+// Run this file directly to print results for the two small examples.
 if (require.main === module) {
   console.log('Running contact-representation checks...');
   const graphs = [makeWheelGraph(), makeTwoInnerVertexGraph()];
- // Add random PTP graphs to the list of graphs to check
   for (const graph of graphs) {
     const result = createRepresentation(graph);
     console.log(JSON.stringify({
