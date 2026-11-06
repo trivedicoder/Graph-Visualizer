@@ -1,17 +1,18 @@
-
-//______________________________ Algorithms ______________________________
-// Each algorithm takes a Graph and reads graph.vertices / graph.edges.
-// This is only for algorithms that don't modify the graph. For algorithms that do modify the graph, use the methods in Graph.js instead.
-
 class Algorithms {
-  degree(graph, id) {                               // number of edges touching a vertex (example)
+  degree(graph, id) {
     return graph.edges.filter(function(e) { return e.from === id || e.to === id }).length
+  }
+
+  stOrdering(graph) {                               // picks s and t itself, returns { order } or { error }
+    var ends = v1.pickEnds(graph)
+    if (ends.error) return ends
+    return v1.compute(graph, ends.s, ends.t)
   }
 }
 
 //______________________________ Start-up ______________________________
-var TAB_BAR_HEIGHT = 48         // height of the tab bar under the canvas
-var SIDEBAR_WIDTH  = 160        // width of the button sidebar
+var TAB_BAR_HEIGHT = 48
+var SIDEBAR_WIDTH  = 160
 
 var canvas = document.getElementById('canvas')
 canvas.width        = window.innerWidth - SIDEBAR_WIDTH

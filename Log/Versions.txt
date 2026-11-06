@@ -13,3 +13,31 @@ Adding redo and undo Buttons
 Adding Save and Load graph Buttons
 Adding graph tab, allows user to load multiple graphs
 Allowing user to choose between upload data to an exisiting or new graph template
+
+
+V3 (October 9, 2026):
+
+Making the vertices snap to the grid
+Allowing user to hover over a choosen vertice, and be able to see its (x,y) coordinates
+Testing and developing St-Ordering Algorithm (V.1)
+Collabrating with Dylan Zerieva
+Reorganized code, to make it better readable. Divided all features in different classes.
+
+    - Buttons.js: Code to design and operate the avaiable buttons.
+
+    - Editor.js: Code that allows user to edit the graph, with other features like display the coordinates when hovered over a selected vertice
+
+    - Graph.js: Code that allows the engine to store vertices and edges. Editor allows user to edit, and this class stores the changes.
+
+    - Main.js: Is where all the algorithms can be tested and implemented without it affecting the editor code.
+
+
+V4 (October 30, 2026):
+
+- Improved the St-Ordering Algorithm (V.1)
+- St-ordering now picks the start and end vertex by itself
+- Fixed bugs that stopped st-ordering from working on most graphs
+- Added a check to make sure the st-ordering is correct
+- Shows an error if the graph can’t be ordered
+- Vertices move into rows after st-ordering, and it can be undone
+- Added an St-ordering button to the sidebar

@@ -19,6 +19,8 @@ class Buttons {
     on('btnundo',   () => { if (this.editor.graph.undo()) this.afterHistory('Undone') })
     on('btnredo',   () => { if (this.editor.graph.redo()) this.afterHistory('Redone') })
     on('btnSave',   () => { this.save(); this.setMode('add', 'Click on canvas to add vertices') })
+    on('btnStOrder', () => this.runStOrdering())
+    on('btnXml', () => this.saveXml())
     on('btnLoad',   () => {
       var intoNewTab = confirm('Load graph into a new tab?\n\nOK = New tab\nCancel = Replace current graph')
       this.load(intoNewTab)
@@ -37,6 +39,23 @@ class Buttons {
     this.editor.setMode(this.editor.mode)           // clears any half-picked edge and redraws
     this.hint.textContent = hintText
   }
+
+  runStOrdering() {                                 // runs the st-ordering from Tests/St-ordering/v1.js
+    if (typeof v1 === 'undefined') {                // v1.js isn't loaded, so don't crash
+      alert('st-ordering code is not loaded')
+      return
+    }
+    if (v1.run(this.editor)) this.afterHistory('St-ordering done')
+  }
+
+  saveXml() {                                       // runs the XML export from Backend/XmlExport.js
+  if (typeof XmlExport === 'undefined') {         // XmlExport.js isn't loaded, so don't crash
+    alert('XML export code is not loaded')
+    return
+  }
+  var ex = new XmlExport(this.editor.graph, this.editor.GRID, this.editor.ORIGIN)
+  if (ex.run()) this.hint.textContent = 'Saved graph.xml'
+}
 
   //______________________________ Tabs ______________________________
   newGraph(graph) {                                 // add a tab (empty unless a graph is given)

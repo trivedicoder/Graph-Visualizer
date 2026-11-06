@@ -226,6 +226,5 @@ function runTest() {
   console.log("valid:", result.valid ? "yes" : `no (failed at ${result.failedAt})`);
 }
 
-runTest();
-
-module.exports = { computeSTOrdering, isValidSTOrdering, buildAdjacency };
+if (typeof module !== 'undefined' && require.main === module) runTest()   // only when run with node
+if (typeof module !== 'undefined') module.exports = { computeSTOrdering, isValidSTOrdering, buildAdjacency }
