@@ -197,7 +197,7 @@ class Graph {
   // Export the planar-graph input format.
   // (REL.js checks planarity with Euler's formula when the XML is processed).
   // options.poles = { north, east, south, west } vertex ids marks the outer face;
-  // without it the outer face is left "not-selected" and REL.js detects it.
+  // without it the outer face is left "not-selected"
   toXML(options) {
     var poles = options && options.poles
     var rotationSystem = this.toRotationSystem()
