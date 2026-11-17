@@ -2,44 +2,63 @@
 
 // ---------- small doubly linked list, so we can insert before/after a
 // ---------- vertex in O(1) while building the ordering ----------
+class LinkedListNode {
+  constructor(value) {
+    this.value = value;
+    this.prev = null;
+    this.next = null;
+  }
+}
+
 class LinkedList {
   constructor() {
     this.head = null;
     this.tail = null;
   }
+
   insertFirst(value) {
-    const node = { value, prev: null, next: null };
-    this.head = node;
-    this.tail = node;
+    const node = new LinkedListNode(value);
+    if (!this.head) {
+      this.head = node;
+      this.tail = node;
+    } else {
+      node.next = this.head;
+      this.head.prev = node;
+      this.head = node;
+    }
     return node;
   }
+
   insertAfter(node, value) {
-    const newNode = { value, prev: node, next: node.next };
-    if (node.next) node.next.prev = newNode;
-    else this.tail = newNode;
+    const newNode = new LinkedListNode(value);
+    newNode.prev = node;
+    newNode.next = node.next;
+
+    if (node.next) {
+      node.next.prev = newNode;
+    } else {
+      this.tail = newNode; // update tail if inserting at the end
+    }
+
     node.next = newNode;
     return newNode;
   }
-  insertBefore(node, value) {
-    const newNode = { value, prev: node.prev, next: node };
-    if (node.prev) node.prev.next = newNode;
-    else this.head = newNode;
-    node.prev = newNode;
-    return newNode;
-  }
+
   toArray() {
-    const arr = [];
-    let n = this.head;
-    while (n) {
-      arr.push(n.value);
-      n = n.next;
+    const result = [];
+    let current = this.head;
+    while (current) {
+      result.push(current.value);
+      current = current.next;
     }
-    return arr;
+    return result;
   }
 }
 
+// ---------- st-ordering algorithm ----------
+
 function edgeKey(a, b) {
-  return a < b ? `${a}|${b}` : `${b}|${a}`;
+  return a < b ? `${a},${b}` : `${b},${a}`;
 }
 
 // adjacency: Map<vertexId, Array<vertexId>>  (undirected, simple graph)
@@ -200,30 +219,6 @@ function buildAdjacency(edges) {
     adjacency.get(b).push(a);
   }
   return adjacency;
-}
-
-// ---------- test ----------
-// Small biconnected graph: s-a, a-t, t-b, b-s, a-b
-//
-//     s---a
-//     |  /|
-//     b---t
-//
-function runTest() {
-  const edges = [
-    ["s", "a"],
-    ["a", "t"],
-    ["t", "b"],
-    ["b", "s"],
-    ["a", "b"],
-  ];
-  const adjacency = buildAdjacency(edges);
-
-  const order = computeSTOrdering(adjacency, "s", "t");
-  console.log("st-ordering:", order.join(", "));
-
-  const result = isValidSTOrdering(adjacency, order);
-  console.log("valid:", result.valid ? "yes" : `no (failed at ${result.failedAt})`);
 }
 
 if (typeof module !== 'undefined' && require.main === module) runTest()   // only when run with node

@@ -1,27 +1,27 @@
 V1 (June 6th 2026):
 
-Create a workspace grid that allows vertices and edges to be placed.
-Buttons for user to switch between placing edges, vertices, deleting or clearing the template
-Allow user to put n number of vertices
-Allow user to connect those vertices with edges
-Allow user to delete edges and vertices that are clicked on
-Allow user to clear the whole template
+- Create a workspace grid that allows vertices and edges to be placed.
+- Buttons for user to switch between placing edges, vertices, deleting or clearing the template
+- Allow user to put n number of vertices
+- Allow user to connect those vertices with edges
+- Allow user to delete edges and vertices that are clicked on
+- Allow user to clear the whole template
 
 V2 (June 26, 2026):
 
-Adding redo and undo Buttons
-Adding Save and Load graph Buttons
-Adding graph tab, allows user to load multiple graphs
-Allowing user to choose between upload data to an exisiting or new graph template
+- Adding redo and undo Buttons
+- Adding Save and Load graph Buttons
+- Adding graph tab, allows user to load multiple graphs
+- Allowing user to choose between upload data to an exisiting or new graph template
 
 
 V3 (October 9, 2026):
 
-Making the vertices snap to the grid
-Allowing user to hover over a choosen vertice, and be able to see its (x,y) coordinates
-Testing and developing St-Ordering Algorithm (V.1)
-Collabrating with Dylan Zerieva
-Reorganized code, to make it better readable. Divided all features in different classes.
+- Making the vertices snap to the grid
+- Allowing user to hover over a choosen vertice, and be able to see its (x,y) coordinates
+- Testing and developing St-Ordering Algorithm (V.1)
+- Collabrating with Dylan Zerieva
+- Reorganized code, to make it better readable. Divided all features in different classes.
 
     - Buttons.js: Code to design and operate the avaiable buttons.
 
@@ -41,3 +41,12 @@ V4 (October 30, 2026):
 - Shows an error if the graph can’t be ordered
 - Vertices move into rows after st-ordering, and it can be undone
 - Added an St-ordering button to the sidebar
+
+V5 (November 5, 2026):
+
+- Added Backend Folder
+- Implemented xml format download
+- Storing the cordninates of each vertex and its neighbours in order (counter-clockwise). Using Polar cordinates.
+- Added "Save XML" button in editor
+- Comepleted v1.js
+- Soon implementing Orthogonal Drawing

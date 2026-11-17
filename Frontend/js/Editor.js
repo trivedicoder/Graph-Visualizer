@@ -1,5 +1,5 @@
 //__________________________________________________________________________ Editor __________________________________________________________________________
-// The canvas: the grid, drawing, and mouse clicks/hover.
+// The canvas: the grid, drawing, and mouse clicks/hover/drag.
 // Edits one Graph at a time (whichever tab is open).
 
 class Editor {
@@ -15,11 +15,16 @@ class Editor {
     this.mode        = 'add'    // 'add', 'edge', or 'delete'
     this.firstPickId = null     // first vertex picked in edge mode
     this.hoveredId   = null     // vertex under the mouse
+    this.dragId      = null     // vertex being dragged (add mode)
+    this.dragged     = false    // true once a drag has actually moved the vertex
+    this.mouse       = null     // last mouse position, for the stretchy edge line
 
     // Arrow functions (=>) keep "this" pointing at the Editor inside the handler
     canvas.addEventListener('click',      (e) => this.handleClick(e))
+    canvas.addEventListener('mousedown',  (e) => this.handleMouseDown(e))
     canvas.addEventListener('mousemove',  (e) => this.handleMouseMove(e))
-    canvas.addEventListener('mouseleave', ()  => this.setHovered(null))
+    canvas.addEventListener('mouseup',    ()  => this.handleMouseUp())
+    canvas.addEventListener('mouseleave', ()  => this.handleMouseLeave())
   }
 
   setGraph(graph) {                                 // show a different graph (used by tabs)
@@ -50,6 +55,7 @@ class Editor {
     this.drawBackground()
     this.drawGrid(hv)
     this.drawEdges()
+    this.drawPreviewEdge()                          // stretchy line in edge mode (under the vertices)
     this.drawVertices()
     if (hv) this.drawCoordLabel(hv)
   }
@@ -92,6 +98,21 @@ class Editor {
     })
   }
 
+  drawPreviewEdge() {                               // line from the first picked vertex to the mouse
+    if (this.mode !== 'edge' || this.firstPickId === null || !this.mouse) return
+    var from = this.graph.getVertex(this.firstPickId)
+    if (!from) return
+    var ctx = this.ctx
+    ctx.beginPath()
+    ctx.moveTo(from.x, from.y)
+    ctx.lineTo(this.mouse.x, this.mouse.y)
+    ctx.strokeStyle = '#ff5555'
+    ctx.lineWidth   = 2
+    ctx.setLineDash([6, 6])                         // dashed = not a real edge yet
+    ctx.stroke()
+    ctx.setLineDash([])                             // back to solid for everything else
+  }
+
   drawVertices() {
     var ctx         = this.ctx
     var radius      = this.RADIUS
@@ -126,6 +147,10 @@ class Editor {
   }
 
   handleClick(event) {
+    if (this.dragged) {                             // a drag just ended, so this isn't a real click
+      this.dragged = false
+      return
+    }
     var p = this.mousePos(event)
     if (this.mode === 'add')    this.handleAdd(p.x, p.y)
     if (this.mode === 'edge')   this.handleEdge(p.x, p.y)
@@ -143,7 +168,11 @@ class Editor {
 
   handleEdge(x, y) {                                // pick two vertices to connect
     var v = this.graph.vertexAt(x, y, this.RADIUS)
-    if (!v) return
+    if (!v) {                                       // clicked empty space: cancel the line
+      this.firstPickId = null
+      this.draw()
+      return
+    }
     if (this.firstPickId === null) {
       this.firstPickId = v.id
     } else {
@@ -165,10 +194,52 @@ class Editor {
     this.draw()
   }
 
-  handleMouseMove(event) {
+  handleMouseDown(event) {                          // start dragging a vertex (add mode only)
+    if (this.mode !== 'add') return
     var p = this.mousePos(event)
     var v = this.graph.vertexAt(p.x, p.y, this.RADIUS)
+    if (v) {
+      this.dragId  = v.id
+      this.dragged = false
+    }
+  }
+
+  handleMouseMove(event) {
+    var p = this.mousePos(event)
+    this.mouse = p
+    if (this.dragId !== null) {                     // dragging: move the vertex, nothing else
+      this.dragTo(p.x, p.y)
+      return
+    }
+    var v = this.graph.vertexAt(p.x, p.y, this.RADIUS)
     this.setHovered(v ? v.id : null)
+    if (this.firstPickId !== null) this.draw()      // stretch the edge line to the mouse
+  }
+
+  dragTo(x, y) {                                    // move the dragged vertex to the nearest free grid point
+    var v  = this.graph.getVertex(this.dragId)
+    var sx = this.snap(x)
+    var sy = this.snap(y)
+    if (!v || (sx === v.x && sy === v.y)) return        // still on the same grid point
+    if (sx < this.ORIGIN || sy < this.ORIGIN) return    // don't go into the margin
+    if (this.graph.isTaken(sx, sy)) return              // another vertex is there
+    if (!this.dragged) this.graph.saveHistory()         // one undo step per drag
+    this.dragged = true
+    v.x = sx
+    v.y = sy
+    this.draw()
+  }
+
+  handleMouseUp() {                                 // stop dragging (the click event comes right after)
+    this.dragId = null
+  }
+
+  handleMouseLeave() {                              // mouse left the canvas: stop everything
+    this.dragId  = null
+    this.dragged = false                            // no click will follow, so reset now
+    this.mouse   = null
+    this.setHovered(null)
+    this.draw()                                     // removes the stretchy line
   }
 
   setHovered(id) {                                  // only redraw when the hover changes

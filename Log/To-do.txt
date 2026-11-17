@@ -1,0 +1,24 @@
+
+1. XML Export
+-------------
+   [x] Save the graph as an .xml file (alongside the current graph.json)
+   [x] List each vertex with every neighbour it connects to
+   [x] Use polar coordinates to store vertex positions in the XML
+   [x] Test the export on graphs drawn in the editor
+   [x] Add loading from .xml so a saved file can be reopened
+
+
+2. St-Ordering
+--------------
+   [x] First version written (v1.js) and linked to the St-ordering button
+   [x] Add a biconnectivity check before running the algorithm
+   [ ] Stress test on randomly generated graphs
+
+
+3. Orthogonal Drawing
+---------------------
+   [ ] Decide on the approach: Biedl-Kant or Tamassia
+   [ ] Define the planar embedding input (edge order around each vertex)
+   [ ] Place vertices one at a time using the st-ordering
+   [ ] Compute final coordinates and bend points
+   [ ] Draw the result on the canvas
