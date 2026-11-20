@@ -1,4 +1,6 @@
-// Tests for faces.js.  Run with:  node faces.test.js
+//  
+//Test in terminal with:node "Tests/Contact rep-drawing/Faces.test.js"
+// 
 var Faces = require('./Faces.js')
 
 // Small stand-in for the Graph class (only what Faces needs).

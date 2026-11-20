@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<planarGraph schemaVersion="1" name="Graph 1">
+  <vertices coordinateSystem="canvas-pixels">
+    <vertex id="0" x="100" y="400" />
+    <vertex id="1" x="250" y="50" />
+    <vertex id="2" x="650" y="50" />
+    <vertex id="3" x="650" y="400" />
+    <vertex id="4" x="350" y="150" />
+    <vertex id="5" x="500" y="150" />
+    <vertex id="6" x="500" y="250" />
+    <vertex id="7" x="350" y="250" />
+  </vertices>
+  <edges directed="false">
+    <edge id="0" from="0" to="1" />
+    <edge id="1" from="1" to="2" />
+    <edge id="2" from="2" to="3" />
+    <edge id="3" from="3" to="0" />
+    <edge id="4" from="0" to="4" />
+    <edge id="5" from="4" to="7" />
+    <edge id="6" from="7" to="0" />
+    <edge id="7" from="4" to="5" />
+    <edge id="8" from="5" to="6" />
+    <edge id="9" from="6" to="7" />
+    <edge id="10" from="6" to="3" />
+    <edge id="11" from="3" to="7" />
+    <edge id="12" from="1" to="5" />
+    <edge id="13" from="1" to="4" />
+    <edge id="14" from="5" to="2" />
+    <edge id="15" from="6" to="2" />
+    <edge id="16" from="4" to="6" />
+  </edges>
+  <rotationSystem status="candidate" source="canvas-coordinates" direction="clockwise">
+    <rotation vertex="0">
+      <neighbor ref="1" />
+      <neighbor ref="4" />
+      <neighbor ref="7" />
+      <neighbor ref="3" />
+    </rotation>
+    <rotation vertex="1">
+      <neighbor ref="2" />
+      <neighbor ref="5" />
+      <neighbor ref="4" />
+      <neighbor ref="0" />
+    </rotation>
+    <rotation vertex="2">
+      <neighbor ref="3" />
+      <neighbor ref="6" />
+      <neighbor ref="5" />
+      <neighbor ref="1" />
+    </rotation>
+    <rotation vertex="3">
+      <neighbor ref="7" />
+      <neighbor ref="6" />
+      <neighbor ref="2" />
+      <neighbor ref="0" />
+    </rotation>
+    <rotation vertex="4">
+      <neighbor ref="1" />
+      <neighbor ref="5" />
+      <neighbor ref="6" />
+      <neighbor ref="7" />
+      <neighbor ref="0" />
+    </rotation>
+    <rotation vertex="5">
+      <neighbor ref="1" />
+      <neighbor ref="2" />
+      <neighbor ref="6" />
+      <neighbor ref="4" />
+    </rotation>
+    <rotation vertex="6">
+      <neighbor ref="4" />
+      <neighbor ref="5" />
+      <neighbor ref="2" />
+      <neighbor ref="3" />
+      <neighbor ref="7" />
+    </rotation>
+    <rotation vertex="7">
+      <neighbor ref="4" />
+      <neighbor ref="6" />
+      <neighbor ref="3" />
+      <neighbor ref="0" />
+    </rotation>
+  </rotationSystem>
+  <outerFace status="not-selected" />
+  <contactRepresentation status="not-generated" />
+</planarGraph>

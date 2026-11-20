@@ -9,7 +9,7 @@
 //   1. rotationFromCoordinates  - polar ordering: sort neighbors by angle (if no XML rotation)
 //   2. traceFaces               - walk the faces of the embedding
 //   3. detectPoles / normalize  - find v_N, v_E, v_S, v_W and fix the orientation
-//   4. checkPTP                 - properly triangulated planar graph? (Euler, faces, separating triangles)
+//   4. checkPTP (From PTP.js)    - properly triangulated planar graph? (Euler, faces, separating triangles)
 //   5. refinedCanonicalOrder    - v1 = v_S, v2 = v_W, ..., vn = v_N   (slide 16)
 //   6. colorEdges               - left/right/base edges -> red/blue    (slide 18)
 //   7. validateREL              - independent check of the REL definition (slide 14)
@@ -25,6 +25,7 @@
   'use strict';
 
   const SIDES = ['north', 'east', 'south', 'west'];
+  const PTP = typeof require === 'function' ? require('./PTP.js') : root.PTP;
 
   // ---------- small helpers ----------
 
@@ -62,12 +63,12 @@
     return new Map([...rotation].map(([v, list]) => [v, [...list].reverse()]));
   }
 
-  // Count edges by summing the degrees and dividing by 2. The rotation system must be consistent (every edge appears in both endpoints' lists).
-  function countEdges(rotation) {
-    let degreeSum = 0;
-    for (const list of rotation.values()) degreeSum += list.length;
-    return degreeSum / 2;
-  }
+  // // Count edges by summing the degrees and dividing by 2. The rotation system must be consistent (every edge appears in both endpoints' lists).
+  // function countEdges(rotation) {
+  //   let degreeSum = 0;
+  //   for (const list of rotation.values()) degreeSum += list.length;
+  //   return degreeSum / 2;
+  // }
 
   // ---------- 1. polar ordering ----------
 
@@ -209,7 +210,7 @@
 
   // Properly triangulated planar graph (slide 13): every inner face is a triangle, the outer
   // face is N-E-S-W, and there is no separating triangle.
-  function checkPTP(rotation, poles) {
+  /*function checkPTP(rotation, poles) {
     const problems = [];
     const n = rotation.size;
     const m = countEdges(rotation);
@@ -257,8 +258,11 @@
       }
     }
     return problems;
-  }
+  }*/
 
+  function checkPTP(rotation, poles) {
+    return new PTP(rotation, poles).check().problems;
+  }
   // ---------- 5. refined canonical order (slide 16) ----------
 
   // Peel vertices off the top: v_n = N first, then repeatedly remove an outer vertex v_k
