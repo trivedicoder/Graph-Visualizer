@@ -50,11 +50,11 @@ class v1 {
   // Finds an ear in the graph. An ear is a path that starts and ends at vertices already in the line,
   // but goes through vertices that aren't in the line. Gives back { path } or { error } if it can't find one.
   static findEar(nb, placed) {
-    for (var a of placed) {
-      for (var u of nb.get(a) || []) {
-        if (placed.has(u)) continue
-        var visited = new Set()
-        var path = this.dfsEar(nb, placed, a, u, visited)
+    for (var a of placed) {                     // look for an ear starting at a vertex already in the line
+      for (var u of nb.get(a) || []) {          // look for a neighbour of a that isn't in the line yet
+        if (placed.has(u)) continue               // u is already in the line, so it can't be part of an ear
+        var visited = new Set()               // to avoid cycles while searching for the other end of the ear
+        var path = this.dfsEar(nb, placed, a, u, visited)   // find the other end of the ear, starting from u
         if (path) return { path: [a, ...path] }
       }
     }
@@ -107,24 +107,29 @@ static isValid(graph, order, s, t) {
     editor.draw()
   }
 
-  // Runs the whole st-ordering process: pick ends, compute order, validate, and apply. Returns true if successful, false if not.
-  static run(editor) {
-    var ends = this.pickEnds(editor.graph)
-    if (ends.error) {
-      console.error(ends.error)
-      return false
+  // Runs the whole st-ordering process: compute order, validate, and apply.
+  // s and t are the vertices the user clicked. If they're left out, pickEnds chooses them (old behaviour).
+  // Returns the order if successful, or false if not (the reason is kept in v1.lastError).
+  static run(editor, s, t) {
+    this.lastError = null
+    if (s === undefined || t === undefined) {
+      var ends = this.pickEnds(editor.graph)
+      if (ends.error) return this.fail(ends.error)
+      s = ends.s
+      t = ends.t
     }
-    var result = this.compute(editor.graph, ends.s, ends.t)
-    if (result.error) {
-      console.error(result.error)
-      return false
-    }
-    if (!this.isValid(editor.graph, result.order, ends.s, ends.t)) {
-      console.error('Computed order is not valid.')
-      return false
-    }
+    if (s === t) return this.fail('s and t must be two different vertices.')
+    var result = this.compute(editor.graph, s, t)
+    if (result.error) return this.fail(result.error)
+    if (!this.isValid(editor.graph, result.order, s, t)) return this.fail('Computed order is not valid.')
     this.apply(editor, result.order)
-    return true
+    return result.order
+  }
+
+  static fail(message) {                                // log the problem, remember it, and return false
+    console.error(message)
+    this.lastError = message
+    return false
   }
 }
 

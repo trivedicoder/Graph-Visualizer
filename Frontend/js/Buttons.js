@@ -8,13 +8,14 @@ class Buttons {
     this.graphs      = []       // one Graph per tab
     this.activeIndex = -1       // which tab is open
     this.hint        = document.getElementById('hint')
+    this.pickedS     = null     // s, once the user has clicked it (st-ordering)
 
     var on = function(id, fn) { document.getElementById(id).addEventListener('click', fn) }
 
     on('btnAdd',    () => this.setMode('add',    'Click on canvas to add vertices'))
     on('btnEdge',   () => this.setMode('edge',   'Click two vertices to connect them'))
     on('btnDelete', () => this.setMode('delete', 'Click on a vertex or edge to delete it'))
-    on('btnClear',  () => { this.editor.graph.clear(); this.editor.setMode(this.editor.mode) })
+    on('btnClear',  () => { this.editor.graph.clear(); this.editor.clearStOrder(); this.editor.setMode(this.editor.mode) })
     on('btnNew',    () => this.newGraph())
     on('btnundo',   () => { if (this.editor.graph.undo()) this.afterHistory('Undone') })
     on('btnredo',   () => { if (this.editor.graph.redo()) this.afterHistory('Redone') })
@@ -27,6 +28,8 @@ class Buttons {
       this.setMode('add', 'Click on canvas to add vertices')
     })
 
+    this.editor.onPick = (v) => this.pickEnd(v)   // the Editor calls this when a vertex is clicked in 'pick' mode
+
     this.newGraph()             // start with Graph 1
   }
 
@@ -36,16 +39,49 @@ class Buttons {
   }
 
   afterHistory(hintText) {                          // shared by undo and redo
+    this.editor.clearStOrder()                      // positions changed, so the s/t colours are out of date
     this.editor.setMode(this.editor.mode)           // clears any half-picked edge and redraws
     this.hint.textContent = hintText
   }
 
+  //______________________________ St-ordering ______________________________
+  // Step 1: the button puts the editor in 'pick' mode and asks for s.
   runStOrdering() {                                 // runs the st-ordering from Tests/St-ordering/v1.js
     if (typeof v1 === 'undefined') {                // v1.js isn't loaded, so don't crash
       alert('st-ordering code is not loaded')
       return
     }
-    if (v1.run(this.editor)) this.afterHistory('St-ordering done')
+    if (this.editor.graph.vertices.length < 2) {
+      alert('Graph must have at least two vertices.')
+      return
+    }
+    this.pickedS = null
+    this.setMode('pick', 'St-ordering: click the vertex you want as s (start)')
+  }
+
+  // Steps 2 and 3: first click is s, second click is t. Then run it and colour s and t.
+  pickEnd(v) {
+    if (this.pickedS === null) {                    // first click = s
+      this.pickedS        = v.id
+      this.editor.markedS = v.id
+      this.editor.draw()
+      this.hint.textContent = 'St-ordering: s = ' + v.id + '. Now click the vertex you want as t (end)'
+      return
+    }
+    if (v.id === this.pickedS) {                    // clicked s again
+      this.hint.textContent = 't has to be a different vertex from s (' + this.pickedS + ')'
+      return
+    }
+
+    var s = this.pickedS, t = v.id                  // second click = t
+    this.pickedS = null
+    var order = v1.run(this.editor, s, t)
+    if (order) {
+      this.setMode('add', 'St-ordering: ' + order.join(' -> ') + '   (green = s, purple = t)')
+      this.editor.showStOrder(order)
+    } else {
+      this.setMode('add', 'St-ordering failed: ' + v1.lastError + ' Click St-ordering to try again.')
+    }
   }
 
   saveXml() {                                       // runs the XML export from Backend/XmlExport.js
@@ -119,7 +155,7 @@ class Buttons {
     } else {
       this.editor.graph.saveHistory()               // so the load can be undone
       this.editor.graph.loadData(data)
-      this.editor.setGraph(this.editor.graph)       // redraw with the new data
+      this.editor.setGraph(this.editor.graph)       // redraw with the new data (also clears the s/t colours)
     }
   }
 }
